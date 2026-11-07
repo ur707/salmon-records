@@ -257,21 +257,23 @@ function renderCards() {
 function renderWaves() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
   if (!maxW) { $("waves").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
+  // 1行ぶん: 最高・最高を出した回数・最初に最高を出した日時（同じ最高を何回も出したら全部の日時をツールチップに）
+  const row = (name, list, val, cls = "") => {
+    const vals = list.map(val);
+    const best = Math.max(...vals);
+    const bestRuns = list.filter(r => val(r) === best);
+    const when = bestRuns.map(r => `${fmtDate(r.d)} ${fmtTime(r.d)}`);
+    return `<tr class="${cls}"><td>${name}</td><td class="hl">${best}</td>
+      <td>${bestRuns.length}回</td>
+      <td title="${esc(when.join("\n"))}">${when[0]}${when.length > 1 ? `<span class="q"> ほか${when.length - 1}回</span>` : ""}</td>
+      <td>${r1(avg(vals))}</td><td>${list.length}</td></tr>`;
+  };
   let rows = "";
   for (let i = 0; i < maxW; i++) {
-    const hit = runs.filter(r => r.waves[i]);
-    const eggs = hit.map(r => r.waves[i][0]);
-    const quotas = hit.map(r => r.waves[i][1]);
-    const best = Math.max(...eggs);
-    const bestRun = hit.find(r => r.waves[i][0] === best);
-    rows += `<tr><td>WAVE ${i + 1}</td><td class="hl">${best}</td><td>${r1(avg(eggs))}</td>
-      <td>${r1(avg(quotas))}</td><td>${hit.length}</td><td class="q">${fmtDate(bestRun.d)}</td></tr>`;
+    rows += row(`WAVE ${i + 1}`, runs.filter(r => r.waves[i]), r => r.waves[i][0]);
   }
-  const totals = runs.map(r => r.total);
-  const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
-  rows += `<tr class="total"><td>合計</td><td class="hl">${best.total}</td><td>${r1(avg(totals))}</td>
-    <td></td><td>${runs.length}</td><td class="q">${fmtDate(best.d)}</td></tr>`;
-  $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>平均</th><th>平均ノルマ</th><th>回数</th><th>最高を出した日</th></tr></thead><tbody>${rows}</tbody>`;
+  rows += row("合計", runs, r => r.total, "total");
+  $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>最高を出した回数</th><th>最高を出した時刻</th><th>平均</th><th>バイト回数</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
 function renderChart() {
