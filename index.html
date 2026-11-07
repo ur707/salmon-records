@@ -127,7 +127,8 @@
   </section>
 
   <section>
-    <h2>合計金イクラの推移</h2>
+    <h2>金イクラの推移</h2>
+    <div class="tabs" role="tablist" id="chartTabs"></div>
     <div class="panel chart">
       <div id="chart"></div>
       <div class="legend">
@@ -264,7 +265,7 @@ function renderWaves() {
     const bestRuns = list.filter(r => val(r) === best);
     const when = bestRuns.map(r => `${fmtDate(r.d)} ${fmtTime(r.d)}`);
     return `<tr class="${cls}"><td>${name}</td><td class="hl">${best}</td>
-      <td>${bestRuns.length}回</td>
+      <td>${bestRuns.length}回<span class="q">（${Math.round(bestRuns.length / list.length * 100)}%）</span></td>
       <td title="${esc(when.join("\n"))}">${when[0]}${when.length > 1 ? `<span class="q"> ほか${when.length - 1}回</span>` : ""}</td>
       <td>${r1(avg(vals))}</td><td>${list.length}</td></tr>`;
   };
@@ -273,21 +274,37 @@ function renderWaves() {
     rows += row(`WAVE ${i + 1}`, runs.filter(r => r.waves[i]), r => r.waves[i][0]);
   }
   rows += row("合計", runs, r => r.total, "total");
-  $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>最高を出した回数</th><th>最高を出した時刻</th><th>平均</th><th>バイト回数</th></tr></thead><tbody>${rows}</tbody>`;
+  $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>最高を出した回数（割合）</th><th>最高を出した時刻</th><th>平均</th><th>バイト回数</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+let chartKey = "合計";  // "合計" か "WAVE1" 〜
+
+function renderChartTabs() {
+  const maxW = Math.max(0, ...runs.map(r => r.waves.length));
+  const keys = ["合計", ...Array.from({ length: maxW }, (_, i) => `WAVE${i + 1}`)];
+  if (!keys.includes(chartKey)) chartKey = "合計";
+  $("chartTabs").innerHTML = keys.map(k =>
+    `<button role="tab" aria-selected="${k === chartKey}" data-k="${k}">${k.replace("WAVE", "WAVE ")}</button>`).join("");
+  $("chartTabs").querySelectorAll("button").forEach(b => b.onclick = () => { chartKey = b.dataset.k; renderChartTabs(); renderChart(); });
 }
 
 function renderChart() {
-  if (runs.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; return; }
+  // 合計 か、そのWAVEまで進んだバイトだけ
+  const wi = chartKey === "合計" ? -1 : Number(chartKey.slice(4)) - 1;
+  const list = wi < 0 ? runs : runs.filter(r => r.waves[wi]);
+  const val = r => (wi < 0 ? r.total : r.waves[wi][0]);
+  if (list.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; return; }
   const W = 960, H = 300, L = 44, R = 12, T = 12, B = 30;
-  const n = runs.length;
-  const totals = runs.map(r => r.total);
+  const n = list.length;
+  const totals = list.map(val);
   let lo = Math.min(...totals), hi = Math.max(...totals);
   const pad = Math.max(10, (hi - lo) * 0.1);
   lo = Math.max(0, Math.floor((lo - pad) / 10) * 10); hi = Math.ceil((hi + pad) / 10) * 10;
   const x = i => L + (n === 1 ? 0 : (i / (n - 1)) * (W - L - R));
   const y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
 
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="合計金イクラの推移">`;
+  const name = chartKey.replace("WAVE", "WAVE ");
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${name}の金イクラの推移">`;
   const step = Math.max(10, Math.ceil((hi - lo) / 5 / 10) * 10);
   for (let v = lo; v <= hi; v += step) {
     svg += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
@@ -295,14 +312,15 @@ function renderChart() {
   }
   // 日付の目盛り（日が変わったところ）
   let lastDay = "";
-  runs.forEach((r, i) => {
+  list.forEach((r, i) => {
     const k = dayKey(r.d);
     if (k !== lastDay) { svg += `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">${fmtDate(r.d)}</text>`; lastDay = k; }
   });
   // 最高記録（階段）
   let best = -1, path = "";
-  runs.forEach((r, i) => {
-    if (r.total > best) { path += best < 0 ? `M${x(i)},${y(r.total)}` : `H${x(i)}V${y(r.total)}`; best = r.total; }
+  list.forEach((r, i) => {
+    const v = val(r);
+    if (v > best) { path += best < 0 ? `M${x(i)},${y(v)}` : `H${x(i)}V${y(v)}`; best = v; }
   });
   path += `H${x(n - 1)}`;
   svg += `<path class="best" d="${path}"/>`;
@@ -310,10 +328,12 @@ function renderChart() {
   const ma = totals.map((_, i) => avg(totals.slice(Math.max(0, i - 9), i + 1)));
   svg += `<path class="avg" d="${ma.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join("")}"/>`;
   // 各バイト
-  runs.forEach((r, i) => {
-    const isNew = r.new && r.new.includes("合計");
-    svg += `<circle class="runs${isNew ? " new" : ""}" cx="${x(i)}" cy="${y(r.total)}" r="${isNew ? 5 : 3.5}">
-      <title>${fmtDate(r.d)} ${fmtTime(r.d)}  合計 ${r.total}個</title></circle>`;
+  list.forEach((r, i) => {
+    const isNew = r.new && r.new.includes(chartKey);
+    const v = val(r);
+    const quota = wi < 0 ? "" : ` / ノルマ ${r.waves[wi][1]}`;
+    svg += `<circle class="runs${isNew ? " new" : ""}" cx="${x(i)}" cy="${y(v)}" r="${isNew ? 5 : 3.5}">
+      <title>${fmtDate(r.d)} ${fmtTime(r.d)}  ${name} ${v}個${quota}</title></circle>`;
   });
   $("chart").innerHTML = svg + "</svg>";
 }
@@ -362,14 +382,14 @@ function renderAll() {
 }
 
 function render() {
-  renderContestPicker(); renderCards(); renderWaves(); renderChart(); renderGroups(); renderContests(); renderAll();
+  renderContestPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderGroups(); renderContests(); renderAll();
   const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
 }
 
-document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+document.querySelectorAll(".tabs button[data-group]").forEach(b => b.addEventListener("click", () => {
   group = b.dataset.group;
-  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll(".tabs button[data-group]").forEach(x => x.setAttribute("aria-selected", x === b));
   renderGroups();
 }));
 
