@@ -165,7 +165,7 @@
   </section>
 
   <section>
-    <h2>金イクラの推移</h2>
+    <h2>イクラの推移</h2>
     <div class="tabs" role="tablist" id="chartTabs"></div>
     <div class="panel chart">
       <div id="chart"></div>
@@ -184,6 +184,14 @@
     <div class="panel">
       <div class="dsum" id="detailSum"></div>
       <div class="dist"><table id="detail"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>赤イクラの記録</h2>
+    <div class="panel">
+      <div class="dsum" id="redSum"></div>
+      <div class="dist"><table id="redDist"></table></div>
     </div>
   </section>
 
@@ -358,6 +366,43 @@ function dreamTotal() {
   return sum;
 }
 
+// 赤イクラ: まとめと、500個ごとの分布
+function renderRed() {
+  const list = runs.filter(r => typeof r.red === "number");
+  if (!list.length) {
+    $("redSum").innerHTML = "";
+    $("redDist").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません（ボットが赤イクラの数字を読めたリザルトから記録されます）</td></tr></tbody>`;
+    return;
+  }
+  const vals = list.map(r => r.red).sort((a, b) => a - b);
+  const best = list.reduce((a, b) => (b.red > a.red ? b : a));
+  const median = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
+  // 合計金イクラとの関係（金イクラ1個あたりの赤イクラ）
+  const perGold = avg(list.map(r => r.red / Math.max(1, r.total)));
+  $("redSum").innerHTML =
+    `<span>最高 <b>${best.red}</b>個（${fmtDate(best.d)} ${fmtTime(best.d)}）</span>` +
+    `<span>平均 <b>${Math.round(avg(vals))}</b></span><span>中央値 <b>${Math.round(median)}</b></span>` +
+    `<span>最低 <b>${vals[0]}</b></span><span>記録 <b>${list.length}</b>回</span>` +
+    `<span>金イクラ1個あたり <b>${r1(perGold)}</b>個</span>`;
+  const STEP = 500;
+  const map = new Map();
+  for (const r of list) {
+    const k = Math.floor(r.red / STEP) * STEP;
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(r);
+  }
+  const most = Math.max(...[...map.values()].map(a => a.length));
+  const top = Math.floor(best.red / STEP) * STEP;
+  const rows = [...map.entries()].sort((a, b) => b[0] - a[0]).map(([k, rs]) => {
+    const last = rs[rs.length - 1].d;
+    return `<tr class="${k === top ? "top" : ""}"><td>${k}〜${k + STEP - 1}個</td><td>${rs.length}回</td>
+      <td>${Math.round(rs.length / list.length * 1000) / 10}%</td>
+      <td class="bar"><span class="b" style="width:${rs.length / most * 100}%"></span></td>
+      <td class="q">${fmtDate(last)} ${fmtTime(last)}</td></tr>`;
+  });
+  $("redDist").innerHTML = `<thead><tr><th>赤イクラ</th><th>回数</th><th>割合</th><th></th><th>最後に出した日時</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
 function renderHours() {
   if (!runs.length) { $("hours").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
   const map = new Map();
@@ -479,6 +524,7 @@ let chartKey = "合計";  // "合計" か "WAVE1" 〜
 function renderChartTabs() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
   const keys = ["合計", ...Array.from({ length: maxW }, (_, i) => `WAVE${i + 1}`)];
+  if (runs.some(r => typeof r.red === "number")) keys.push("赤イクラ");
   if (!keys.includes(chartKey)) chartKey = "合計";
   $("chartTabs").innerHTML = keys.map(k =>
     `<button role="tab" aria-selected="${k === chartKey}" data-k="${k}">${k.replace("WAVE", "WAVE ")}</button>`).join("");
@@ -486,23 +532,24 @@ function renderChartTabs() {
 }
 
 function renderChart() {
-  // 合計 か、そのWAVEまで進んだバイトだけ
-  const wi = chartKey === "合計" ? -1 : Number(chartKey.slice(4)) - 1;
-  const list = wi < 0 ? runs : runs.filter(r => r.waves[wi]);
-  const val = r => (wi < 0 ? r.total : r.waves[wi][0]);
+  // 合計 / そのWAVEまで進んだバイト / 赤イクラを読めたバイト
+  const wi = chartKey === "合計" ? -1 : chartKey === "赤イクラ" ? -2 : Number(chartKey.slice(4)) - 1;
+  const list = wi === -1 ? runs : wi === -2 ? runs.filter(r => typeof r.red === "number") : runs.filter(r => r.waves[wi]);
+  const val = r => (wi === -1 ? r.total : wi === -2 ? r.red : r.waves[wi][0]);
   if (list.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; return; }
   const W = 960, H = 300, L = 44, R = 12, T = 12, B = 30;
   const n = list.length;
   const totals = list.map(val);
   let lo = Math.min(...totals), hi = Math.max(...totals);
-  const pad = Math.max(10, (hi - lo) * 0.1);
-  lo = Math.max(0, Math.floor((lo - pad) / 10) * 10); hi = Math.ceil((hi + pad) / 10) * 10;
+  const u = wi === -2 ? 500 : 10;  // 目盛りの刻み（赤イクラは数が大きいので500ずつ）
+  const pad = Math.max(u, (hi - lo) * 0.1);
+  lo = Math.max(0, Math.floor((lo - pad) / u) * u); hi = Math.ceil((hi + pad) / u) * u;
   const x = i => L + (n === 1 ? 0 : (i / (n - 1)) * (W - L - R));
   const y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
 
   const name = chartKey.replace("WAVE", "WAVE ");
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${name}の金イクラの推移">`;
-  const step = Math.max(10, Math.ceil((hi - lo) / 5 / 10) * 10);
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${wi === -2 ? "赤イクラの推移" : name + "の金イクラの推移"}">`;
+  const step = Math.max(u, Math.ceil((hi - lo) / 5 / u) * u);
   for (let v = lo; v <= hi; v += step) {
     svg += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
       <text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
@@ -588,7 +635,7 @@ function renderAll() {
 
 function render() {
   renderShiftPicker(); renderCards(); renderBestRun(); renderWaves(); renderChartTabs(); renderChart(); renderDetail();
-  renderHours(); renderPBs(); renderShiftList(); renderAll();
+  renderRed(); renderHours(); renderPBs(); renderShiftList(); renderAll();
   const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
 }
