@@ -310,6 +310,7 @@ function renderCards() {
   const judged = runs.filter(r => r.clear === true || r.clear === false);
   const cleared = judged.filter(r => r.clear).length;
   const reds = runs.filter(r => typeof r.red === "number");
+  const exs = runs.filter(r => r.ex === true || r.ex === false);  // EX-WAVE があったバイト
   const bestRed = reds.length ? reds.reduce((a, b) => (b.red > a.red ? b : a)) : null;
   const dream = dreamTotal();
   $("cards").innerHTML =
@@ -318,6 +319,8 @@ function renderCards() {
     (dream ? card("全WAVEで最高を出せたら", dream, "個", `最高合計まで あと${dream - best.total}個`) : "") +
     card("クリア率", judged.length ? Math.round(cleared / judged.length * 100) : "−", judged.length ? "%" : "",
       judged.length ? `${cleared}/${judged.length}回クリア` : "判定できた記録なし") +
+    (exs.length ? card("オカシラ撃破率", Math.round(exs.filter(r => r.ex).length / exs.length * 100), "%",
+      `${exs.filter(r => r.ex).length}/${exs.length}回撃破`) : "") +
     card("赤イクラ", bestRed ? bestRed.red : "−", bestRed ? "個" : "",
       bestRed ? `最高（平均 ${Math.round(avg(reds.map(r => r.red)))}個・${reds.length}回分）` : "まだ記録なし") +
     card("バイト回数", runs.length, "回", `${fmtDate(first)} ${fmtTime(first)} 〜 ${fmtDate(last)} ${fmtTime(last)}`);
@@ -334,7 +337,8 @@ function renderBestRun() {
     return `<div class="w${top ? " top" : ""}" title="${top ? "このWAVEの最高と同じ" : ""}">
       <div class="n">WAVE ${i + 1}</div><div class="e">${w[0]}<small>/${w[1]}</small></div></div>`;
   }).join("");
-  const res = best.clear === true ? '<span class="ok">クリア</span>' : best.clear === false ? '<span class="ng">失敗</span>' : "";
+  const res = (best.clear === true ? '<span class="ok">クリア</span>' : best.clear === false ? '<span class="ng">失敗</span>' : "")
+    + (best.ex === true ? " / オカシラ撃破" : best.ex === false ? " / オカシラNG" : "");
   $("bestRun").innerHTML =
     `<div class="head"><h3>最高合計 ${best.total}個のバイト</h3>
       <span>${fmtFull(best.d)}${ties > 1 ? `（同じ合計 ほか${ties - 1}回）` : ""}</span>${res ? `<span>${res}</span>` : ""}
@@ -562,7 +566,8 @@ function renderAll() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
   const list = runs.slice().reverse().slice(0, shown);
   const head = `<tr><th>日時</th><th>結果</th>${Array.from({ length: maxW }, (_, i) => `<th>W${i + 1}</th>`).join("")}<th>合計</th><th>赤イクラ</th></tr>`;
-  const result = r => r.clear === true ? '<span class="ok">クリア</span>' : r.clear === false ? '<span class="ng">失敗</span>' : '<span class="q">−</span>';
+  const result = r => (r.clear === true ? '<span class="ok">クリア</span>' : r.clear === false ? '<span class="ng">失敗</span>' : '<span class="q">−</span>')
+    + (r.ex === true ? '<span class="q"> / </span><span class="ok">オカシラ撃破</span>' : r.ex === false ? '<span class="q"> / オカシラNG</span>' : "");
   const body = list.map(r => {
     const cells = Array.from({ length: maxW }, (_, i) => {
       const w = r.waves[i];
