@@ -692,7 +692,8 @@ function renderChart() {
 
   // クリア＝緑、失敗＝赤、いまの最高記録を出したバイト＝金色
   const r0 = n > 120 ? 2.5 : n > 50 ? 3.2 : 4;
-  const kindOfRun = (r, gi) => (vals[gi] === top ? "rec" : r.clear === false ? "fail" : "ok");
+  const topAt = vals.lastIndexOf(top);  // 最高記録が何回かあるときは、一番最近のものだけ金色にする
+  const kindOfRun = (r, gi) => (gi === topAt ? "rec" : r.clear === false ? "fail" : "ok");
   chartPts = [];
   if (bars) {
     const bw = Math.max(2, Math.min(28, slot * 0.72));
