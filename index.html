@@ -391,8 +391,9 @@ async function load() {
   const keys = contestKeys();
   if (!selected || !keys.includes(selected)) {
     const fromHash = decodeURIComponent(location.hash.slice(1));
-    const latest = allRuns.length ? keyOf(allRuns[allRuns.length - 1]) : null;
-    selected = keys.includes(fromHash) ? fromHash : latest;  // 最初は一番新しいリザルトのコンテスト
+    // 最初は一番新しいコンテスト（通常バイトしか無いときだけ通常バイト）
+    const latest = keys.find(k => k !== REGULAR) || keys[0] || null;
+    selected = keys.includes(fromHash) ? fromHash : latest;
   }
   runs = allRuns.filter(r => keyOf(r) === selected);
   render();
