@@ -147,6 +147,8 @@
   .bestrun .w .e small { font-size: 13px; color: var(--muted); font-weight: 600; }
   .bestrun .w.top { border-color: var(--accent); background: var(--accent-soft); }
   .bestrun .w.sum { border-color: var(--accent); }
+  .unk { display: inline-block; min-width: 1.2em; text-align: center; font-weight: 800; color: #b26b00;
+    background: rgba(255, 170, 0, .18); border-radius: 4px; padding: 0 3px; }
   .ok { color: var(--accent-ink); font-weight: 700; }
   .ng { color: #d9534f; font-weight: 700; }
   #hours td.bar { width: 35%; text-align: left; }
@@ -267,6 +269,7 @@
 
   <section>
     <h2>全リザルト</h2>
+    <div class="q" id="allNote" style="margin:-6px 0 8px"></div>
     <div class="panel scroll"><table id="all"></table></div>
     <div class="more" id="more"></div>
   </section>
@@ -290,7 +293,9 @@ let selected = null;
 let shown = 30;
 let clearFilter = "all";  // all / clear / fail
 // 選んでいるシフトのリザルトを、クリア/失敗の絞り込みに合わせて取り出す
-const pick = k => allRuns.filter(r => keyOf(r) === k &&
+const pickAll = k => allRuns.filter(r => keyOf(r) === k &&
+  (clearFilter === "all" || (clearFilter === "clear" ? r.clear === true : r.clear === false)));
+const pick = k => allRuns.filter(r => keyOf(r) === k && r.complete &&
   (clearFilter === "all" || (clearFilter === "clear" ? r.clear === true : r.clear === false)));
 const KIND = { contest: "バイトチームコンテスト", bigrun: "ビッグラン", regular: "通常バイト", unknown: "不明" };
 const keyOf = r => r.shift || r.contest || "unknown";
@@ -346,7 +351,8 @@ function renderShiftPicker() {
 
 function renderShiftList() {
   const rows = shiftKeys().map(k => {
-    const list = allRuns.filter(r => keyOf(r) === k);
+    const list = allRuns.filter(r => keyOf(r) === k && r.complete);
+    if (!list.length) return "";
     const totals = list.map(r => r.total);
     const rec = list.some(r => r.new && r.new.length);
     return `<tr data-k="${esc(k)}"${k === selected ? ' class="sel"' : ""}>
@@ -755,8 +761,10 @@ let chartResizeTimer = null;
 addEventListener("resize", () => { clearTimeout(chartResizeTimer); chartResizeTimer = setTimeout(renderChart, 150); });
 
 function renderAll() {
-  const maxW = Math.max(0, ...runs.map(r => r.waves.length));
-  const list = runs.slice().reverse().slice(0, shown);
+  const every = pickAll(selected);  // 「?」がある回も含めて全部
+  const maxW = Math.max(0, ...every.map(r => r.waves.length));
+  const list = every.slice().reverse().slice(0, shown);
+  const qn = v => (v == null ? '<span class="unk">?</span>' : v);
   const head = `<tr><th>日時</th><th>結果</th>${Array.from({ length: maxW }, (_, i) => `<th>W${i + 1}</th>`).join("")}<th>合計</th><th>赤イクラ</th></tr>`;
   const result = r => (r.clear === true ? '<span class="ok">クリア</span>' : r.clear === false ? '<span class="ng">失敗</span>' : '<span class="q">−</span>')
     + (r.ex === true ? '<span class="q"> / </span><span class="ok">オカシラ撃破</span>' : r.ex === false ? '<span class="q"> / オカシラNG</span>' : "");
@@ -765,15 +773,18 @@ function renderAll() {
       const w = r.waves[i];
       if (!w) return "<td></td>";
       const isNew = r.new && r.new.includes(`WAVE${i + 1}`);
-      return `<td${isNew ? ' class="rec"' : ""}>${w[0]}<span class="q">/${w[1]}</span></td>`;
+      return `<td${isNew ? ' class="rec"' : ""}>${qn(w[0])}<span class="q">/${qn(w[1])}</span></td>`;
     }).join("");
     const isNew = r.new && r.new.includes("合計");
-    return `<tr><td>${fmtDate(r.d)} ${fmtTime(r.d)}</td><td>${result(r)}</td>${cells}<td${isNew ? ' class="rec"' : ""}><b>${r.total}</b></td>
+    return `<tr><td>${fmtDate(r.d)} ${fmtTime(r.d)}</td><td>${result(r)}</td>${cells}<td${isNew ? ' class="rec"' : ""}><b>${qn(r.total)}</b></td>
       <td>${typeof r.red === "number" ? r.red : '<span class="q">−</span>'}</td></tr>`;
   }).join("");
-  $("all").innerHTML = runs.length ? `<thead>${head}</thead><tbody>${body}</tbody>`
+  const unknown = every.filter(r => !r.complete).length;
+  $("allNote").innerHTML = unknown
+    ? `<span class="unk">?</span> は読み取れなかった数字です（${unknown}回）。この回は直すまで集計に入りません。` : "";
+  $("all").innerHTML = every.length ? `<thead>${head}</thead><tbody>${body}</tbody>`
     : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
-  $("more").innerHTML = runs.length > shown ? `<button id="moreBtn">もっと見る（残り${runs.length - shown}件）</button>` : "";
+  $("more").innerHTML = every.length > shown ? `<button id="moreBtn">もっと見る（残り${every.length - shown}件）</button>` : "";
   const btn = $("moreBtn");
   if (btn) btn.onclick = () => { shown += 50; renderAll(); };
 }
@@ -808,7 +819,11 @@ async function getJson(name, fallback) {
 async function load() {
   const [data, sh] = await Promise.all([getJson("results.json", []), getJson("shifts.json", {})]);
   shifts = sh || {};
-  allRuns = (Array.isArray(data) ? data : []).map(r => ({ ...r, d: new Date(r.time) })).sort((a, b) => a.d - b.d);
+  allRuns = (Array.isArray(data) ? data : []).map(r => ({
+    ...r, d: new Date(r.time),
+    // 読めなかった数字（?）がある回は、直すまで集計に入れない
+    complete: r.total != null && r.waves.every(w => w[0] != null && w[1] != null),
+  })).sort((a, b) => a.d - b.d);
   const keys = shiftKeys();
   if (!selected || !keys.includes(selected)) {
     const fromHash = decodeURIComponent(location.hash.slice(1));
