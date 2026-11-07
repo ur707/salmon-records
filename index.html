@@ -71,6 +71,8 @@
   td.hl { color: var(--accent-ink); font-weight: 800; }
 
   .tabs { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 3px; margin-bottom: 12px; }
+  .tabs { max-width: 100%; overflow-x: auto; }
+  .tabs button { white-space: nowrap; flex: none; }
   .tabs button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--muted); padding: 4px 14px; border-radius: 99px; cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); font-weight: 700; box-shadow: var(--shadow); }
 
@@ -105,6 +107,18 @@
   .dist .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
   .dist tr.under .b { background: var(--muted); opacity: .5; }
   .dist tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
+  .bestrun { margin-top: 12px; }
+  .bestrun:empty { display: none; }
+  .bestrun .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin-bottom: 10px; }
+  .bestrun .head h3 { margin: 0; font-size: 15px; }
+  .bestrun .head span { color: var(--muted); font-size: 13px; }
+  .bestrun .wv { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; }
+  .bestrun .w { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; text-align: center; background: var(--bg); }
+  .bestrun .w .n { font-size: 12px; color: var(--muted); }
+  .bestrun .w .e { font-size: 24px; font-weight: 800; line-height: 1.2; }
+  .bestrun .w .e small { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .bestrun .w.top { border-color: var(--accent); background: var(--accent-soft); }
+  .bestrun .w.sum { border-color: var(--accent); }
   .ok { color: var(--accent-ink); font-weight: 700; }
   .ng { color: #d9534f; font-weight: 700; }
   #hours td.bar { width: 35%; text-align: left; }
@@ -139,6 +153,8 @@
   </div>
 
   <div class="cards" id="cards"></div>
+
+  <div class="panel bestrun" id="bestRun"></div>
 
   <section>
     <h2>WAVEごとの記録</h2>
@@ -301,6 +317,25 @@ function renderCards() {
     card("赤イクラ", bestRed ? bestRed.red : "−", bestRed ? "個" : "",
       bestRed ? `最高（平均 ${Math.round(avg(reds.map(r => r.red)))}個・${reds.length}回分）` : "まだ記録なし") +
     card("バイト回数", runs.length, "回", `${fmtDate(first)} ${fmtTime(first)} 〜 ${fmtDate(last)} ${fmtTime(last)}`);
+}
+
+// 最高合計を出したバイトの WAVE ごとの内訳（同じ合計が複数あれば最初に出したもの）
+function renderBestRun() {
+  if (!runs.length) { $("bestRun").innerHTML = ""; return; }
+  const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
+  const ties = runs.filter(r => r.total === best.total).length;
+  const waveBest = i => Math.max(...runs.filter(r => r.waves[i]).map(r => r.waves[i][0]));
+  const cells = best.waves.map((w, i) => {
+    const top = w[0] === waveBest(i);  // そのWAVEの最高とも同じなら色付き
+    return `<div class="w${top ? " top" : ""}" title="${top ? "このWAVEの最高と同じ" : ""}">
+      <div class="n">WAVE ${i + 1}</div><div class="e">${w[0]}<small>/${w[1]}</small></div></div>`;
+  }).join("");
+  const res = best.clear === true ? '<span class="ok">クリア</span>' : best.clear === false ? '<span class="ng">失敗</span>' : "";
+  $("bestRun").innerHTML =
+    `<div class="head"><h3>最高合計 ${best.total}個のバイト</h3>
+      <span>${fmtFull(best.d)}${ties > 1 ? `（同じ合計 ほか${ties - 1}回）` : ""}</span>${res ? `<span>${res}</span>` : ""}
+      ${typeof best.red === "number" ? `<span>赤イクラ ${best.red}個</span>` : ""}</div>
+    <div class="wv">${cells}<div class="w sum"><div class="n">合計</div><div class="e">${best.total}</div></div></div>`;
 }
 
 // 各WAVEの最高を足した数（いちばん多くWAVEまで進んだバイトの数だけ足す）
@@ -516,7 +551,7 @@ function renderAll() {
 }
 
 function render() {
-  renderShiftPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderDetail();
+  renderShiftPicker(); renderCards(); renderBestRun(); renderWaves(); renderChartTabs(); renderChart(); renderDetail();
   renderHours(); renderPBs(); renderShiftList(); renderAll();
   const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
