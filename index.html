@@ -105,8 +105,12 @@
   .dist .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
   .dist tr.under .b { background: var(--muted); opacity: .5; }
   .dist tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
-  #contests tr { cursor: pointer; }
-  #contests tr.sel td { background: var(--accent-soft); }
+  #shiftList tr[data-k] { cursor: pointer; }
+  #shiftList tr.sel td { background: var(--accent-soft); }
+  .kind { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px;
+    border: 1px solid var(--line); color: var(--ink); margin-right: 6px; }
+  .kind.k-contest { border-color: var(--accent); color: var(--accent-ink); }
+  .kind.k-bigrun { border-color: var(--gold); color: var(--gold); }
   @media (max-width: 560px) {
     .wrap { padding-top: 20px; }
     .panel { padding: 12px; }
@@ -123,10 +127,10 @@
 
   <div class="contest panel">
     <label class="pick">
-      <span class="label">コンテスト</span>
-      <select id="contest"></select>
+      <span class="label">シフト</span>
+      <select id="shift"></select>
     </label>
-    <div class="info" id="contestInfo"></div>
+    <div class="info" id="shiftInfo"></div>
   </div>
 
   <div class="cards" id="cards"></div>
@@ -159,17 +163,8 @@
   </section>
 
   <section>
-    <h2>配信ごと・日ごと</h2>
-    <div class="tabs" role="tablist">
-      <button role="tab" aria-selected="true" data-group="session">配信ごと</button>
-      <button role="tab" aria-selected="false" data-group="day">日ごと</button>
-    </div>
-    <div class="panel scroll"><table id="groups"></table></div>
-  </section>
-
-  <section>
-    <h2>コンテスト一覧</h2>
-    <div class="panel scroll"><table id="contests"></table></div>
+    <h2>シフトごと</h2>
+    <div class="panel scroll"><table id="shiftList"></table></div>
   </section>
 
   <section>
@@ -191,30 +186,29 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 let allRuns = [];   // 全リザルト
-let runs = [];      // 選んでいるコンテストのリザルト
-let contests = {};  // contests.json（コンテストの期間・ステージ・ブキ）
+let runs = [];      // 選んでいるシフトのリザルト
+let shifts = {};    // shifts.json（シフトの種類・期間・ステージ・ブキ）
 let selected = null;
-let group = "session";
 let shown = 30;
-const REGULAR = "regular";
-const keyOf = r => r.contest || REGULAR;
+const KIND = { contest: "バイトチームコンテスト", bigrun: "ビッグラン", regular: "通常バイト", unknown: "不明" };
+const keyOf = r => r.shift || r.contest || "unknown";
+const kindOf = k => (shifts[k] && shifts[k].kind) || "unknown";
 const startOf = k => {
-  const c = contests[k];
+  const c = shifts[k];
   return new Date(c && c.start ? c.start : k.replace(" ", "T"));
 };
 const fmtFull = d => `${fmtDate(d)}（${"日月火水木金土"[d.getDay()]}）${fmtTime(d)}`;
 
-function contestLabel(k) {
-  if (k === REGULAR) return "通常バイト";
-  const c = contests[k] || {};
+function shiftLabel(k) {
+  const c = shifts[k] || {};
   const s = startOf(k);
   const e = c.end ? new Date(c.end) : null;
-  return `${fmtDate(s)}${e ? "〜" + fmtDate(e) : ""} ${c.stage || ""}`.trim();
+  const period = e ? `${fmtDate(s)} ${fmtTime(s)}〜${fmtDate(e)} ${fmtTime(e)}` : `${fmtDate(s)}〜`;
+  return `${period} ${c.stage || ""}`.trim();
 }
 
-function contestKeys() {
-  const keys = [...new Set(allRuns.map(keyOf))];
-  return keys.sort((a, b) => (a === REGULAR) - (b === REGULAR) || startOf(b) - startOf(a));
+function shiftKeys() {
+  return [...new Set(allRuns.map(keyOf))].sort((a, b) => startOf(b) - startOf(a));
 }
 
 function select(k) {
@@ -225,32 +219,42 @@ function select(k) {
   render();
 }
 
-function renderContestPicker() {
-  const keys = contestKeys();
-  $("contest").innerHTML = keys.map(k => `<option value="${esc(k)}"${k === selected ? " selected" : ""}>${esc(contestLabel(k))}</option>`).join("")
-    || `<option>記録なし</option>`;
-  const c = contests[selected];
-  if (!selected || selected === REGULAR || !c) { $("contestInfo").innerHTML = ""; return; }
-  if (!c.end) { $("contestInfo").innerHTML = `<span>期間・ステージの情報はありません</span>`; return; }
-  const s = startOf(selected), e = c.end ? new Date(c.end) : null, now = new Date();
-  const live = e && s <= now && now < e;
-  $("contestInfo").innerHTML =
-    `<span>${live ? '<span class="live">開催中</span>' : ""}期間 <b>${fmtFull(s)}${e ? " 〜 " + fmtFull(e) : ""}</b></span>` +
+function renderShiftPicker() {
+  const keys = shiftKeys();
+  // 種類ごとにまとめて並べる（コンテスト → ビッグラン → 通常）
+  const groups = ["contest", "bigrun", "regular", "unknown"].map(kind => {
+    const ks = keys.filter(k => kindOf(k) === kind);
+    return ks.length ? `<optgroup label="${KIND[kind]}">` +
+      ks.map(k => `<option value="${esc(k)}"${k === selected ? " selected" : ""}>${esc(shiftLabel(k))}</option>`).join("") +
+      `</optgroup>` : "";
+  }).join("");
+  $("shift").innerHTML = groups || `<option>記録なし</option>`;
+  const c = shifts[selected];
+  if (!selected) { $("shiftInfo").innerHTML = ""; return; }
+  const kindTag = `<span class="kind k-${kindOf(selected)}">${KIND[kindOf(selected)]}</span>`;
+  if (!c || !c.end) { $("shiftInfo").innerHTML = `<span>${kindTag}期間・ステージの情報はありません</span>`; return; }
+  const s = startOf(selected), e = new Date(c.end), now = new Date();
+  const live = s <= now && now < e;
+  $("shiftInfo").innerHTML =
+    `<span>${kindTag}${live ? '<span class="live">開催中</span>' : ""}期間 <b>${fmtFull(s)} 〜 ${fmtFull(e)}</b></span>` +
     (c.stage ? `<span>ステージ <b>${esc(c.stage)}</b></span>` : "") +
     (c.weapons && c.weapons.length ? `<span>ブキ <b>${c.weapons.map(esc).join("・")}</b></span>` : "");
 }
 
-function renderContests() {
-  const rows = contestKeys().map(k => {
+function renderShiftList() {
+  const rows = shiftKeys().map(k => {
     const list = allRuns.filter(r => keyOf(r) === k);
     const totals = list.map(r => r.total);
-    return `<tr data-k="${esc(k)}"${k === selected ? ' class="sel"' : ""}><td>${esc(contestLabel(k))}</td>
-      <td>${list.length}</td><td class="hl">${Math.max(...totals)}</td><td>${r1(avg(totals))}</td></tr>`;
+    const rec = list.some(r => r.new && r.new.length);
+    return `<tr data-k="${esc(k)}"${k === selected ? ' class="sel"' : ""}>
+      <td>${esc(shiftLabel(k))}${rec ? '<span class="badge">記録更新</span>' : ""}</td>
+      <td class="q">${KIND[kindOf(k)]}</td>
+      <td>${list.length}</td><td class="hl">${Math.max(...totals)}</td><td>${r1(avg(totals))}</td><td>${Math.min(...totals)}</td></tr>`;
   });
-  $("contests").innerHTML = rows.length
-    ? `<thead><tr><th></th><th>回数</th><th>最高合計</th><th>平均合計</th></tr></thead><tbody>${rows.join("")}</tbody>`
+  $("shiftList").innerHTML = rows.length
+    ? `<thead><tr><th>シフト</th><th>種類</th><th>回数</th><th>最高合計</th><th>平均合計</th><th>最低合計</th></tr></thead><tbody>${rows.join("")}</tbody>`
     : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
-  $("contests").querySelectorAll("tr[data-k]").forEach(tr => tr.onclick = () => {
+  $("shiftList").querySelectorAll("tr[data-k]").forEach(tr => tr.onclick = () => {
     select(tr.dataset.k);
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
@@ -266,12 +270,12 @@ function renderCards() {
   const totals = runs.map(r => r.total);
   const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
   const recent = totals.slice(-10);
-  const days = new Set(runs.map(r => dayKey(r.d))).size;
+  const first = runs[0].d, last = runs[runs.length - 1].d;
   $("cards").innerHTML =
     card("最高合計", best.total, "個", `${fmtDate(best.d)} ${fmtTime(best.d)}`, "best") +
     card("平均合計", r1(avg(totals)), "個", `全${runs.length}回`) +
     card("直近10回の平均", r1(avg(recent)), "個", `${recent.length}回分`) +
-    card("バイト回数", runs.length, "回", `${days}日・${new Set(runs.map(r => r.session)).size}配信`);
+    card("バイト回数", runs.length, "回", `${fmtDate(first)} ${fmtTime(first)} 〜 ${fmtDate(last)} ${fmtTime(last)}`);
 }
 
 function renderWaves() {
@@ -404,28 +408,6 @@ function renderChart() {
   $("chart").innerHTML = svg + "</svg>";
 }
 
-function renderGroups() {
-  const map = new Map();
-  for (const r of runs) {
-    const k = group === "session" ? r.session : dayKey(r.d);
-    if (!map.has(k)) map.set(k, []);
-    map.get(k).push(r);
-  }
-  const rows = [...map.entries()].reverse().map(([k, list]) => {
-    const totals = list.map(r => r.total);
-    const first = list[0].d;
-    const label = group === "session"
-      ? `${fmtDate(first)} ${k.length >= 16 ? k.slice(11, 16) : ""} の配信`
-      : `${fmtDate(first)}（${"日月火水木金土"[first.getDay()]}）`;
-    const rec = list.some(r => r.new && r.new.length);
-    return `<tr><td>${esc(label)}${rec ? '<span class="badge">記録更新</span>' : ""}</td><td>${list.length}</td>
-      <td>${r1(avg(totals))}</td><td class="hl">${Math.max(...totals)}</td><td>${Math.min(...totals)}</td></tr>`;
-  });
-  $("groups").innerHTML = rows.length
-    ? `<thead><tr><th></th><th>回数</th><th>平均合計</th><th>最高</th><th>最低</th></tr></thead><tbody>${rows.join("")}</tbody>`
-    : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
-}
-
 function renderAll() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
   const list = runs.slice().reverse().slice(0, shown);
@@ -448,19 +430,12 @@ function renderAll() {
 }
 
 function render() {
-  renderContestPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderDetail(); renderGroups(); renderContests(); renderAll();
+  renderShiftPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderDetail(); renderShiftList(); renderAll();
   const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
 }
 
-document.querySelectorAll(".tabs button[data-group]").forEach(b => b.addEventListener("click", () => {
-  group = b.dataset.group;
-  document.querySelectorAll(".tabs button[data-group]").forEach(x => x.setAttribute("aria-selected", x === b));
-  renderGroups();
-}));
-
-$("contest").addEventListener("change", e => select(e.target.value));
-
+$("shift").addEventListener("change", e => select(e.target.value));
 async function getJson(name, fallback) {
   try {
     const res = await fetch(name + "?t=" + Date.now(), { cache: "no-store" });
@@ -471,20 +446,19 @@ async function getJson(name, fallback) {
 }
 
 async function load() {
-  const [data, cs] = await Promise.all([getJson("results.json", []), getJson("contests.json", {})]);
-  contests = cs || {};
+  const [data, sh] = await Promise.all([getJson("results.json", []), getJson("shifts.json", {})]);
+  shifts = sh || {};
   allRuns = (Array.isArray(data) ? data : []).map(r => ({ ...r, d: new Date(r.time) })).sort((a, b) => a.d - b.d);
-  const keys = contestKeys();
+  const keys = shiftKeys();
   if (!selected || !keys.includes(selected)) {
     const fromHash = decodeURIComponent(location.hash.slice(1));
-    // 最初は一番新しいコンテスト（通常バイトしか無いときだけ通常バイト）
-    const latest = keys.find(k => k !== REGULAR) || keys[0] || null;
+    // 最初は一番新しいコンテストのシフト（無ければ一番新しいシフト）
+    const latest = keys.find(k => kindOf(k) === "contest") || keys[0] || null;
     selected = keys.includes(fromHash) ? fromHash : latest;
   }
   runs = allRuns.filter(r => keyOf(r) === selected);
   render();
-}
-load();
+}load();
 setInterval(load, 60000); // 開いたままでも1分ごとに最新にする
 </script>
 </body>
