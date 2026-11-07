@@ -777,7 +777,7 @@ function renderAll() {
     }).join("");
     const isNew = r.new && r.new.includes("合計");
     return `<tr><td>${fmtDate(r.d)} ${fmtTime(r.d)}</td><td>${result(r)}</td>${cells}<td${isNew ? ' class="rec"' : ""}><b>${qn(r.total)}</b></td>
-      <td>${typeof r.red === "number" ? r.red : '<span class="q">−</span>'}</td></tr>`;
+      <td>${typeof r.red === "number" ? r.red : r.img ? qn(null) : '<span class="q">−</span>'}</td></tr>`;
   }).join("");
   const unknown = every.filter(r => !r.complete).length;
   $("allNote").innerHTML = unknown
