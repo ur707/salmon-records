@@ -643,7 +643,6 @@ function renderChart() {
   const u = wi === -2 ? 500 : 10;
   const pad = Math.max(u, (hi - lo) * 0.08);
   lo = Math.max(0, Math.floor((lo - pad) / u) * u); hi = Math.ceil((hi + pad) / u) * u;
-  if (bars) lo = 0;  // 棒グラフは0から（棒の長さで比べられるように）
   const slot = (W - L - R) / n;
   const x = i => bars ? L + (i + 0.5) * slot : L + (n === 1 ? (W - L - R) / 2 : (i / (n - 1)) * (W - L - R));
   const y = val_ => T + (1 - (val_ - lo) / (hi - lo)) * (H - T - B);
