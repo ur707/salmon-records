@@ -76,16 +76,34 @@
   .tabs button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--muted); padding: 4px 14px; border-radius: 99px; cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); font-weight: 700; box-shadow: var(--shadow); }
 
-  .chart svg { width: 100%; height: auto; display: block; }
+  .chartbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; }
+  .chartwrap { position: relative; }
+  .chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
   .chart .axis { stroke: var(--line); }
-  .chart .tick { fill: var(--muted); font-size: 11px; }
+  .chart .tick { fill: var(--muted); font-size: 12px; }
   .chart .tick.day { fill: var(--ink); font-weight: 700; }
   .chart .vtick { stroke: var(--muted); }
   .chart .brk { stroke: var(--muted); stroke-dasharray: 3 4; opacity: .6; }
-  .chart .runs { fill: var(--muted); opacity: .55; }
-  .chart .runs.new { fill: var(--gold); opacity: 1; }
-  .chart .best { fill: none; stroke: var(--accent); stroke-width: 2.5; }
-  .chart .avg { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .5; }
+  .chart .pt { fill: var(--muted); opacity: .7; }
+  .chart .pt.fail { fill: var(--panel); stroke: #d9534f; stroke-width: 1.8; opacity: 1; }
+  .chart .pt.rec { fill: var(--gold); opacity: 1; }
+  .chart .best { fill: none; stroke: var(--accent); stroke-width: 3; }
+  .chart .avg { fill: none; stroke: #4f8ff7; stroke-width: 2; opacity: .85; }
+  .chart .endlabel { font-size: 12px; font-weight: 800; }
+  .chart .endlabel.best { fill: var(--accent-ink); stroke: none; }
+  .chart .endlabel.avg { fill: #4f8ff7; stroke: none; }
+  .chart .guide { stroke: var(--ink); stroke-width: 1; opacity: .35; }
+  .chart .hl { fill: none; stroke: var(--ink); stroke-width: 2; }
+  .tip { position: absolute; top: 6px; pointer-events: none; background: var(--panel); border: 1px solid var(--line);
+    box-shadow: 0 4px 16px rgba(0,0,0,.15); border-radius: 8px; padding: 6px 10px; font-size: 12px; line-height: 1.5; white-space: nowrap; }
+  .tip b { font-size: 15px; }
+  .legend .lg { display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .legend .lg.best { width: 16px; height: 3px; background: var(--accent); border-radius: 2px; }
+  .legend .lg.avg { width: 16px; height: 2px; background: #4f8ff7; }
+  .legend .lg.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .legend .lg.dot.fail { background: var(--panel); border: 1.8px solid #d9534f; }
+  .legend .lg.dot.rec { background: var(--gold); }
+  .legend .lg.brk { width: 0; height: 12px; border-left: 2px dashed var(--muted); }
   .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 12px; margin-top: 8px; }
   .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
   .empty { color: var(--muted); padding: 24px 0; text-align: center; }
@@ -180,15 +198,28 @@
 
   <section>
     <h2>イクラの推移</h2>
-    <div class="tabs" role="tablist" id="chartTabs"></div>
-    <div class="panel chart">
-      <div id="chart"></div>
-      <div class="legend">
-        <span><i style="background:var(--accent)"></i>最高記録</span>
-        <span><i style="background:var(--ink);opacity:.5"></i>直近10回の平均</span>
-        <span><i style="background:var(--gold);height:8px;width:8px;border-radius:50%"></i>記録更新したバイト</span>
-        <span><i style="border-left:2px dashed var(--muted);width:2px;height:12px;background:none"></i>1時間以上あいたところ</span>
+    <div class="chartbar">
+      <div class="tabs" role="tablist" id="chartTabs"></div>
+      <div class="tabs" role="tablist" id="chartRange">
+        <button role="tab" aria-selected="false" data-n="30">直近30回</button>
+        <button role="tab" aria-selected="false" data-n="100">直近100回</button>
+        <button role="tab" aria-selected="true" data-n="0">すべて</button>
       </div>
+    </div>
+    <div class="panel chart">
+      <div class="chartwrap">
+        <div id="chart"></div>
+        <div class="tip" id="chartTip" hidden></div>
+      </div>
+      <div class="legend">
+        <span><i class="lg best"></i>最高記録</span>
+        <span><i class="lg avg"></i>直近10回の平均</span>
+        <span><i class="lg dot"></i>クリア</span>
+        <span><i class="lg dot fail"></i>失敗</span>
+        <span><i class="lg dot rec"></i>最高記録を更新</span>
+        <span><i class="lg brk"></i>1時間以上あいたところ</span>
+      </div>
+      <div class="q" style="margin-top:4px">点にマウスを乗せる（スマホはタップ）と、そのバイトの記録が出ます</div>
     </div>
   </section>
 
@@ -570,33 +601,50 @@ function renderChartTabs() {
   $("chartTabs").querySelectorAll("button").forEach(b => b.onclick = () => { chartKey = b.dataset.k; renderChartTabs(); renderChart(); });
 }
 
+let chartRange = 0;  // 0 = すべて、それ以外は直近N回
+let chartPts = [];   // ツールチップ用 [{x, y, r}]
+
 function renderChart() {
   // 合計 / そのWAVEまで進んだバイト / 赤イクラを読めたバイト
   const wi = chartKey === "合計" ? -1 : chartKey === "赤イクラ" ? -2 : Number(chartKey.slice(4)) - 1;
-  const list = wi === -1 ? runs : wi === -2 ? runs.filter(r => typeof r.red === "number") : runs.filter(r => r.waves[wi]);
+  const all = wi === -1 ? runs : wi === -2 ? runs.filter(r => typeof r.red === "number") : runs.filter(r => r.waves[wi]);
   const val = r => (wi === -1 ? r.total : wi === -2 ? r.red : r.waves[wi][0]);
-  if (list.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; return; }
-  const W = 960, H = 300, L = 44, R = 12, T = 12, B = 30;
-  const n = list.length;
-  const totals = list.map(val);
-  let lo = Math.min(...totals), hi = Math.max(...totals);
-  const u = wi === -2 ? 500 : 10;  // 目盛りの刻み（赤イクラは数が大きいので500ずつ）
-  const pad = Math.max(u, (hi - lo) * 0.1);
-  lo = Math.max(0, Math.floor((lo - pad) / u) * u); hi = Math.ceil((hi + pad) / u) * u;
-  const x = i => L + (n === 1 ? 0 : (i / (n - 1)) * (W - L - R));
-  const y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const tip = $("chartTip");
+  tip.hidden = true;
+  if (all.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; chartPts = []; return; }
 
-  const name = chartKey.replace("WAVE", "WAVE ");
-  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${wi === -2 ? "赤イクラの推移" : name + "の金イクラの推移"}">`;
+  // 最高記録の線・平均は「すべて」の流れで計算して、表示する範囲だけ切り出す
+  const vals = all.map(val);
+  const bestAt = [];
+  let b = -Infinity;
+  vals.forEach(v => { b = Math.max(b, v); bestAt.push(b); });
+  const maAt = vals.map((_, i) => avg(vals.slice(Math.max(0, i - 9), i + 1)));
+  const start = chartRange && all.length > chartRange ? all.length - chartRange : 0;
+  const list = all.slice(start);
+  const n = list.length;
+  const v = i => vals[start + i];
+
+  // 画面の幅に合わせて描く（スマホでも文字や点が小さくならない）
+  const W = Math.max(300, $("chart").clientWidth || 600);
+  const H = Math.round(Math.min(380, Math.max(240, W * 0.42)));
+  const L = 46, R = 58, T = 14, B = 30;
+  const shown = list.map((_, i) => v(i));
+  let lo = Math.min(...shown), hi = Math.max(...shown);
+  const u = wi === -2 ? 500 : 10;
+  const pad = Math.max(u, (hi - lo) * 0.08);
+  lo = Math.max(0, Math.floor((lo - pad) / u) * u); hi = Math.ceil((hi + pad) / u) * u;
+  const x = i => L + (n === 1 ? (W - L - R) / 2 : (i / (n - 1)) * (W - L - R));
+  const y = val_ => T + (1 - (val_ - lo) / (hi - lo)) * (H - T - B);
+
+  const label = wi === -2 ? "赤イクラの推移" : chartKey.replace("WAVE", "WAVE ") + "の金イクラの推移";
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${label}">`;
   const step = Math.max(u, Math.ceil((hi - lo) / 5 / u) * u);
-  for (let v = lo; v <= hi; v += step) {
-    svg += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
-      <text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  for (let g = lo; g <= hi; g += step) {
+    svg += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(g)}" y2="${y(g)}"/>
+      <text class="tick" x="${L - 6}" y="${y(g) + 4}" text-anchor="end">${g}</text>`;
   }
-  // 横軸の目盛り（並べ方はバイトの順番のまま）
-  //   ・日付が変わった最初のバイト: 「11/14 20:05」（太字）
-  //   ・1時間以上あいた後の最初のバイト: 休憩の区切り線と時刻
-  //   ・そのほか: だいたい等間隔に時刻
+
+  // 横軸: 日付が変わったところ（太字）、1時間以上あいた後、等間隔の時刻
   const cand = [];
   let lastDay = "";
   list.forEach((r, i) => {
@@ -604,49 +652,92 @@ function renderChart() {
     if (k !== lastDay) { cand.push({ i, text: `${fmtDate(r.d)} ${fmtTime(r.d)}`, rank: 0 }); lastDay = k; }
     else if (i && r.d - list[i - 1].d > 3600e3) cand.push({ i, text: fmtTime(r.d), rank: 1 });
   });
-  const every = Math.max(1, Math.round(n / 8));
+  const every = Math.max(1, Math.round(n / Math.max(2, Math.floor((W - L - R) / 90))));
   for (let i = 0; i < n; i += every) cand.push({ i, text: fmtTime(list[i].d), rank: 2 });
-  if (n > 1) cand.push({ i: n - 1, text: fmtTime(list[n - 1].d), rank: 3 });
-  // 大事な目盛りから順に、文字が重ならないものだけ使う
+  // 文字の置き場所（端ではみ出さないように寄せた位置）で重なりを調べる
+  const halfOf = c => (c.rank === 0 ? 38 : 16);
+  const posOf = c => Math.min(W - R - halfOf(c), Math.max(L + halfOf(c), x(c.i)));
   const ticks = [];
-  for (const c of cand.sort((a, b) => a.rank - b.rank)) {
-    const room = c.rank === 0 ? 46 : 30;  // 文字の半分くらいの幅
-    if (ticks.some(t => t.i === c.i || Math.abs(x(t.i) - x(c.i)) < room + (t.rank === 0 ? 46 : 30))) continue;
+  for (const c of cand.sort((a, b2) => a.rank - b2.rank)) {
+    if (ticks.some(t => t.i === c.i || Math.abs(posOf(t) - posOf(c)) < halfOf(t) + halfOf(c) + 8)) continue;
     ticks.push(c);
   }
-  // 休憩の区切り線（1時間以上あいたところ）
   list.forEach((r, i) => {
     if (i && r.d - list[i - 1].d > 3600e3) {
       const bx = (x(i - 1) + x(i)) / 2;
-      svg += `<line class="brk" x1="${bx}" x2="${bx}" y1="${T}" y2="${H - B}"><title>${fmtDate(list[i - 1].d)} ${fmtTime(list[i - 1].d)} 〜 ${fmtDate(r.d)} ${fmtTime(r.d)} は休憩</title></line>`;
+      svg += `<line class="brk" x1="${bx}" x2="${bx}" y1="${T}" y2="${H - B}"/>`;
     }
   });
   for (const t of ticks) {
-    const tx = Math.min(W - R - (t.rank === 0 ? 40 : 16), Math.max(L + (t.rank === 0 ? 40 : 16), x(t.i)));
+    const tx = posOf(t);
     svg += `<line class="vtick" x1="${x(t.i)}" x2="${x(t.i)}" y1="${H - B}" y2="${H - B + 5}"/>
-      <text class="tick${t.rank === 0 ? " day" : ""}" x="${tx}" y="${H - 8}" text-anchor="middle">${t.text}</text>`;
+      <text class="tick${t.rank === 0 ? " day" : ""}" x="${tx}" y="${H - 9}" text-anchor="middle">${t.text}</text>`;
   }
-  // 最高記録（階段）
-  let best = -1, path = "";
-  list.forEach((r, i) => {
-    const v = val(r);
-    if (v > best) { path += best < 0 ? `M${x(i)},${y(v)}` : `H${x(i)}V${y(v)}`; best = v; }
+
+  // 最高記録（階段）と直近10回の平均
+  let path = "";
+  list.forEach((_, i) => {
+    const bv = bestAt[start + i];
+    path += i === 0 ? `M${x(0)},${y(bv)}` : bv !== bestAt[start + i - 1] ? `H${x(i)}V${y(bv)}` : "";
   });
   path += `H${x(n - 1)}`;
+  svg += `<path class="avg" d="${list.map((_, i) => `${i ? "L" : "M"}${x(i)},${y(maAt[start + i])}`).join("")}"/>`;
   svg += `<path class="best" d="${path}"/>`;
-  // 直近10回の平均
-  const ma = totals.map((_, i) => avg(totals.slice(Math.max(0, i - 9), i + 1)));
-  svg += `<path class="avg" d="${ma.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join("")}"/>`;
-  // 各バイト
+
+  // 点: クリア＝灰色、失敗＝赤い輪、最高記録を更新＝金色
+  const r0 = n > 120 ? 2.5 : n > 50 ? 3.2 : 4;
+  chartPts = [];
   list.forEach((r, i) => {
-    const isNew = r.new && r.new.includes(chartKey);
-    const v = val(r);
-    const quota = wi < 0 ? "" : ` / ノルマ ${r.waves[wi][1]}`;
-    svg += `<circle class="runs${isNew ? " new" : ""}" cx="${x(i)}" cy="${y(v)}" r="${isNew ? 5 : 3.5}">
-      <title>${fmtDate(r.d)} ${fmtTime(r.d)}  ${name} ${v}個${quota}</title></circle>`;
+    const gi = start + i;
+    const isRec = gi > 0 && vals[gi] > bestAt[gi - 1];
+    const cls = isRec ? "pt rec" : r.clear === false ? "pt fail" : "pt";
+    svg += `<circle class="${cls}" cx="${x(i)}" cy="${y(v(i))}" r="${isRec ? r0 + 1.5 : r0}"/>`;
+    chartPts.push({ x: x(i), y: y(v(i)), r, v: v(i), rec: isRec });
   });
-  $("chart").innerHTML = svg + "</svg>";
+
+  // 右端に今の最高と平均の数字
+  const lastBest = bestAt[all.length - 1], lastMa = maAt[all.length - 1];
+  let yb = y(lastBest) + 4, ya = y(lastMa) + 4;
+  if (Math.abs(yb - ya) < 14) ya = yb + 14;  // 重ならないようにずらす
+  svg += `<text class="endlabel best" x="${W - R + 6}" y="${yb}">${lastBest}</text>`;
+  svg += `<text class="endlabel avg" x="${W - R + 6}" y="${Math.min(H - B, ya)}">${wi === -2 ? Math.round(lastMa) : r1(lastMa)}</text>`;
+  svg += `<g id="chartHover"></g></svg>`;
+  $("chart").innerHTML = svg;
+
+  // マウス／タップで一番近いバイトの記録を出す
+  const el = $("chart").querySelector("svg");
+  const show = ev => {
+    const rect = el.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * (W / rect.width);
+    let best = null;
+    for (const p of chartPts) if (!best || Math.abs(p.x - px) < Math.abs(best.x - px)) best = p;
+    if (!best) return;
+    const r = best.r;
+    const quota = wi >= 0 ? ` <span class="q">/ ノルマ ${r.waves[wi][1]}</span>` : "";
+    const res = r.clear === true ? '<span class="ok">クリア</span>' : r.clear === false ? '<span class="ng">失敗</span>' : "";
+    tip.innerHTML = `${fmtDate(r.d)} ${fmtTime(r.d)} ${res}<br><b>${best.v}</b>個${quota}` +
+      (best.rec ? ` <span class="rec">最高記録</span>` : "") +
+      (wi === -1 && typeof r.red === "number" ? `<br><span class="q">赤イクラ ${r.red}</span>` : "");
+    tip.hidden = false;
+    const left = best.x * (rect.width / W);
+    tip.style.left = Math.min(rect.width - tip.offsetWidth - 4, Math.max(4, left - tip.offsetWidth / 2)) + "px";
+    tip.style.top = Math.max(4, best.y * (rect.height / H) - tip.offsetHeight - 14) + "px";
+    $("chartHover").innerHTML = `<line class="guide" x1="${best.x}" x2="${best.x}" y1="${T}" y2="${H - B}"/>
+      <circle class="hl" cx="${best.x}" cy="${best.y}" r="${r0 + 4}"/>`;
+  };
+  el.addEventListener("pointermove", show);
+  el.addEventListener("pointerdown", show);
+  el.addEventListener("pointerleave", () => { tip.hidden = true; $("chartHover").innerHTML = ""; });
 }
+
+document.querySelectorAll("#chartRange button").forEach(b => b.addEventListener("click", () => {
+  chartRange = Number(b.dataset.n);
+  document.querySelectorAll("#chartRange button").forEach(x => x.setAttribute("aria-selected", x === b));
+  renderChart();
+}));
+// 画面の幅が変わったら描き直す
+let chartResizeTimer = null;
+addEventListener("resize", () => { clearTimeout(chartResizeTimer); chartResizeTimer = setTimeout(renderChart, 150); });
 
 function renderAll() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
