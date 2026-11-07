@@ -99,6 +99,7 @@
   .pick select { font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); background: var(--bg);
     border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
   .contest .info { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+  .contest .filter { margin: 0 0 0 auto; }
   .contest .info b { color: var(--ink); font-weight: 700; }
   .live { display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 99px;
     background: var(--accent); color: #1b1d17; margin-right: 6px; }
@@ -153,6 +154,11 @@
       <select id="shift"></select>
     </label>
     <div class="info" id="shiftInfo"></div>
+    <div class="tabs filter" role="tablist" id="clearFilter">
+      <button role="tab" aria-selected="true" data-f="all">すべて</button>
+      <button role="tab" aria-selected="false" data-f="clear">クリアのみ</button>
+      <button role="tab" aria-selected="false" data-f="fail">失敗のみ</button>
+    </div>
   </div>
 
   <div class="cards" id="cards"></div>
@@ -233,6 +239,10 @@ let runs = [];      // 選んでいるシフトのリザルト
 let shifts = {};    // shifts.json（シフトの種類・期間・ステージ・ブキ）
 let selected = null;
 let shown = 30;
+let clearFilter = "all";  // all / clear / fail
+// 選んでいるシフトのリザルトを、クリア/失敗の絞り込みに合わせて取り出す
+const pick = k => allRuns.filter(r => keyOf(r) === k &&
+  (clearFilter === "all" || (clearFilter === "clear" ? r.clear === true : r.clear === false)));
 const KIND = { contest: "バイトチームコンテスト", bigrun: "ビッグラン", regular: "通常バイト", unknown: "不明" };
 const keyOf = r => r.shift || r.contest || "unknown";
 const kindOf = k => (shifts[k] && shifts[k].kind) || "unknown";
@@ -256,7 +266,7 @@ function shiftKeys() {
 
 function select(k) {
   selected = k;
-  runs = allRuns.filter(r => keyOf(r) === k);
+  runs = pick(k);
   shown = 30;
   try { history.replaceState(null, "", "#" + encodeURIComponent(k)); } catch (e) {}
   render();
@@ -647,6 +657,15 @@ function render() {
 }
 
 $("shift").addEventListener("change", e => select(e.target.value));
+
+// クリア / 失敗 で絞り込む（クリア判定ができなかったバイトは「すべて」のときだけ出る）
+document.querySelectorAll("#clearFilter button").forEach(b => b.addEventListener("click", () => {
+  clearFilter = b.dataset.f;
+  document.querySelectorAll("#clearFilter button").forEach(x => x.setAttribute("aria-selected", x === b));
+  runs = pick(selected);
+  shown = 30;
+  render();
+}));
 async function getJson(name, fallback) {
   try {
     const res = await fetch(name + "?t=" + Date.now(), { cache: "no-store" });
@@ -667,7 +686,7 @@ async function load() {
     const latest = keys.find(k => kindOf(k) === "contest") || keys[0] || null;
     selected = keys.includes(fromHash) ? fromHash : latest;
   }
-  runs = allRuns.filter(r => keyOf(r) === selected);
+  runs = pick(selected);
   render();
 }load();
 setInterval(load, 60000); // 開いたままでも1分ごとに最新にする
