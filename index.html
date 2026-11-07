@@ -105,6 +105,11 @@
   .dist .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
   .dist tr.under .b { background: var(--muted); opacity: .5; }
   .dist tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
+  .ok { color: var(--accent-ink); font-weight: 700; }
+  .ng { color: #d9534f; font-weight: 700; }
+  #hours td.bar { width: 35%; text-align: left; }
+  #hours .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
+  #hours tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
   #shiftList tr[data-k] { cursor: pointer; }
   #shiftList tr.sel td { background: var(--accent-soft); }
   .kind { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px;
@@ -160,6 +165,16 @@
       <div class="dsum" id="detailSum"></div>
       <div class="dist"><table id="detail"></table></div>
     </div>
+  </section>
+
+  <section>
+    <h2>時間帯ごとの成績</h2>
+    <div class="panel scroll"><table id="hours"></table></div>
+  </section>
+
+  <section>
+    <h2>自己ベストの更新履歴</h2>
+    <div class="panel scroll dist"><table id="pbs"></table></div>
   </section>
 
   <section>
@@ -271,11 +286,75 @@ function renderCards() {
   const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
   const recent = totals.slice(-10);
   const first = runs[0].d, last = runs[runs.length - 1].d;
+  // クリア判定のあるリザルトだけで数える
+  const judged = runs.filter(r => r.clear === true || r.clear === false);
+  const cleared = judged.filter(r => r.clear).length;
+  const reds = runs.filter(r => typeof r.red === "number");
+  const bestRed = reds.length ? reds.reduce((a, b) => (b.red > a.red ? b : a)) : null;
+  const dream = dreamTotal();
   $("cards").innerHTML =
     card("最高合計", best.total, "個", `${fmtDate(best.d)} ${fmtTime(best.d)}`, "best") +
-    card("平均合計", r1(avg(totals)), "個", `全${runs.length}回`) +
-    card("直近10回の平均", r1(avg(recent)), "個", `${recent.length}回分`) +
+    card("平均合計", r1(avg(totals)), "個", `直近10回 ${r1(avg(recent))}個`) +
+    (dream ? card("全WAVEで最高を出せたら", dream, "個", `最高合計まで あと${dream - best.total}個`) : "") +
+    card("クリア率", judged.length ? Math.round(cleared / judged.length * 100) : "−", judged.length ? "%" : "",
+      judged.length ? `${cleared}/${judged.length}回クリア` : "判定できた記録なし") +
+    card("赤イクラ", bestRed ? bestRed.red : "−", bestRed ? "個" : "",
+      bestRed ? `最高（平均 ${Math.round(avg(reds.map(r => r.red)))}個・${reds.length}回分）` : "まだ記録なし") +
     card("バイト回数", runs.length, "回", `${fmtDate(first)} ${fmtTime(first)} 〜 ${fmtDate(last)} ${fmtTime(last)}`);
+}
+
+// 各WAVEの最高を足した数（いちばん多くWAVEまで進んだバイトの数だけ足す）
+function dreamTotal() {
+  const maxW = Math.max(0, ...runs.map(r => r.waves.length));
+  let sum = 0;
+  for (let i = 0; i < maxW; i++) {
+    const vals = runs.filter(r => r.waves[i]).map(r => r.waves[i][0]);
+    if (!vals.length) return 0;
+    sum += Math.max(...vals);
+  }
+  return sum;
+}
+
+function renderHours() {
+  if (!runs.length) { $("hours").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
+  const map = new Map();
+  for (const r of runs) {
+    const h = r.d.getHours();
+    if (!map.has(h)) map.set(h, []);
+    map.get(h).push(r);
+  }
+  const avgs = [...map.values()].map(l => avg(l.map(r => r.total)));
+  const top = Math.max(...avgs), lo = Math.min(...avgs);
+  const rows = [...map.entries()].sort((a, b) => ((a[0] + 18) % 24) - ((b[0] + 18) % 24)).map(([h, list]) => {
+    const totals = list.map(r => r.total);
+    const a = avg(totals);
+    const judged = list.filter(r => r.clear === true || r.clear === false);
+    const rate = judged.length ? `${Math.round(judged.filter(r => r.clear).length / judged.length * 100)}%` : "−";
+    const w = top === lo ? 100 : 15 + (a - lo) / (top - lo) * 85;
+    return `<tr class="${a === top && map.size > 1 ? "top" : ""}"><td>${h}時台</td><td>${list.length}回</td>
+      <td class="hl">${r1(a)}</td><td class="bar"><span class="b" style="width:${w}%"></span></td>
+      <td>${Math.max(...totals)}</td><td>${rate}</td></tr>`;
+  });
+  $("hours").innerHTML = `<thead><tr><th>時間帯</th><th>回数</th><th>平均合計</th><th></th><th>最高合計</th><th>クリア率</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
+// 自己ベストを更新した瞬間を、古いものから順に拾う（そのシフトの最初のリザルトは「最初の記録」なので含めない）
+function renderPBs() {
+  const best = {};
+  const list = [];
+  for (const r of runs) {
+    const items = [["合計", r.total], ...r.waves.map((w, i) => [`WAVE ${i + 1}`, w[0]])];
+    if (typeof r.red === "number") items.push(["赤イクラ", r.red]);
+    for (const [name, v] of items) {
+      if (best[name] === undefined) { best[name] = v; continue; }
+      if (v > best[name]) { list.push({ d: r.d, name, old: best[name], v }); best[name] = v; }
+    }
+  }
+  $("pbs").innerHTML = list.length
+    ? `<thead><tr><th>日時</th><th>項目</th><th>更新前</th><th></th><th>更新後</th><th>伸び</th></tr></thead><tbody>` +
+      list.reverse().map(p => `<tr><td>${fmtDate(p.d)} ${fmtTime(p.d)}</td><td>${p.name}</td><td class="q">${p.old}</td>
+        <td class="q">→</td><td class="hl">${p.v}</td><td class="rec">+${p.v - p.old}</td></tr>`).join("") + `</tbody>`
+    : `<tbody><tr><td class="empty">まだ更新はありません（このシフトの2回目以降のバイトで記録を超えると出ます）</td></tr></tbody>`;
 }
 
 function renderWaves() {
@@ -297,6 +376,11 @@ function renderWaves() {
     rows += row(`WAVE ${i + 1}`, runs.filter(r => r.waves[i]), r => r.waves[i][0]);
   }
   rows += row("合計", runs, r => r.total, "total");
+  const dream = dreamTotal();
+  if (dream) {
+    rows += `<tr><td>全WAVEの最高を足すと</td><td class="hl">${dream}</td>
+      <td colspan="4" class="q">いまの最高合計より ${dream - Math.max(...runs.map(r => r.total))}個 多い</td></tr>`;
+  }
   $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>最高を出した回数（割合）</th><th>最高を出した時刻</th><th>平均</th><th>バイト回数</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
@@ -411,7 +495,8 @@ function renderChart() {
 function renderAll() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
   const list = runs.slice().reverse().slice(0, shown);
-  const head = `<tr><th>日時</th>${Array.from({ length: maxW }, (_, i) => `<th>W${i + 1}</th>`).join("")}<th>合計</th></tr>`;
+  const head = `<tr><th>日時</th><th>結果</th>${Array.from({ length: maxW }, (_, i) => `<th>W${i + 1}</th>`).join("")}<th>合計</th><th>赤イクラ</th></tr>`;
+  const result = r => r.clear === true ? '<span class="ok">クリア</span>' : r.clear === false ? '<span class="ng">失敗</span>' : '<span class="q">−</span>';
   const body = list.map(r => {
     const cells = Array.from({ length: maxW }, (_, i) => {
       const w = r.waves[i];
@@ -420,7 +505,8 @@ function renderAll() {
       return `<td${isNew ? ' class="rec"' : ""}>${w[0]}<span class="q">/${w[1]}</span></td>`;
     }).join("");
     const isNew = r.new && r.new.includes("合計");
-    return `<tr><td>${fmtDate(r.d)} ${fmtTime(r.d)}</td>${cells}<td${isNew ? ' class="rec"' : ""}><b>${r.total}</b></td></tr>`;
+    return `<tr><td>${fmtDate(r.d)} ${fmtTime(r.d)}</td><td>${result(r)}</td>${cells}<td${isNew ? ' class="rec"' : ""}><b>${r.total}</b></td>
+      <td>${typeof r.red === "number" ? r.red : '<span class="q">−</span>'}</td></tr>`;
   }).join("");
   $("all").innerHTML = runs.length ? `<thead>${head}</thead><tbody>${body}</tbody>`
     : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
@@ -430,7 +516,8 @@ function renderAll() {
 }
 
 function render() {
-  renderShiftPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderDetail(); renderShiftList(); renderAll();
+  renderShiftPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderDetail();
+  renderHours(); renderPBs(); renderShiftList(); renderAll();
   const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
 }
