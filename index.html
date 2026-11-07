@@ -303,6 +303,12 @@ function renderShiftList() {
   });
 }
 
+// 合計が一番多いバイト。合計が同じなら赤イクラが多い方、それも同じなら先に出した方
+function bestTotalRun(list) {
+  const red = r => (typeof r.red === "number" ? r.red : -1);
+  return list.reduce((a, b) => (b.total > a.total || (b.total === a.total && red(b) > red(a)) ? b : a));
+}
+
 function card(label, value, unit, sub, cls = "") {
   return `<div class="card ${cls}"><div class="label">${label}</div>
     <div class="value">${value}<small>${unit}</small></div><div class="sub">${sub}</div></div>`;
@@ -311,7 +317,7 @@ function card(label, value, unit, sub, cls = "") {
 function renderCards() {
   if (!runs.length) { $("cards").innerHTML = ""; return; }
   const totals = runs.map(r => r.total);
-  const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
+  const best = bestTotalRun(runs);
   const recent = totals.slice(-10);
   const first = runs[0].d, last = runs[runs.length - 1].d;
   // クリア判定のあるリザルトだけで数える
@@ -337,7 +343,7 @@ function renderCards() {
 // 最高合計を出したバイトの WAVE ごとの内訳（同じ合計が複数あれば最初に出したもの）
 function renderBestRun() {
   if (!runs.length) { $("bestRun").innerHTML = ""; return; }
-  const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
+  const best = bestTotalRun(runs);
   const ties = runs.filter(r => r.total === best.total).length;
   const waveBest = i => Math.max(...runs.filter(r => r.waves[i]).map(r => r.waves[i][0]));
   const cells = best.waves.map((w, i) => {
