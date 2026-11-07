@@ -95,6 +95,14 @@
   .contest .info b { color: var(--ink); font-weight: 700; }
   .live { display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 99px;
     background: var(--accent); color: #1b1d17; margin-right: 6px; }
+  .dsum { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .dsum b { color: var(--ink); font-size: 15px; }
+  .dist { max-height: 420px; overflow: auto; }
+  .dist th { position: sticky; top: 0; background: var(--panel); }
+  .dist td.bar { width: 45%; text-align: left; }
+  .dist .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
+  .dist tr.under .b { background: var(--muted); opacity: .5; }
+  .dist tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
   #contests tr { cursor: pointer; }
   #contests tr.sel td { background: var(--accent-soft); }
   @media (max-width: 560px) {
@@ -136,6 +144,15 @@
         <span><i style="background:var(--ink);opacity:.5"></i>直近10回の平均</span>
         <span><i style="background:var(--gold);height:8px;width:8px;border-radius:50%"></i>記録更新したバイト</span>
       </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>WAVEごとの詳細</h2>
+    <div class="tabs" role="tablist" id="detailTabs"></div>
+    <div class="panel">
+      <div class="dsum" id="detailSum"></div>
+      <div class="dist"><table id="detail"></table></div>
     </div>
   </section>
 
@@ -277,6 +294,53 @@ function renderWaves() {
   $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>最高を出した回数（割合）</th><th>最高を出した時刻</th><th>平均</th><th>バイト回数</th></tr></thead><tbody>${rows}</tbody>`;
 }
 
+let detailKey = "WAVE1";  // 詳細を見るWAVE（"合計" も可）
+
+function renderDetail() {
+  const maxW = Math.max(0, ...runs.map(r => r.waves.length));
+  const keys = [...Array.from({ length: maxW }, (_, i) => `WAVE${i + 1}`), "合計"];
+  if (!keys.includes(detailKey)) detailKey = keys[0] || "合計";
+  $("detailTabs").innerHTML = keys.map(k =>
+    `<button role="tab" aria-selected="${k === detailKey}" data-k="${k}">${k.replace("WAVE", "WAVE ")}</button>`).join("");
+  $("detailTabs").querySelectorAll("button").forEach(b => b.onclick = () => { detailKey = b.dataset.k; renderDetail(); });
+
+  const wi = detailKey === "合計" ? -1 : Number(detailKey.slice(4)) - 1;
+  const list = wi < 0 ? runs : runs.filter(r => r.waves[wi]);
+  if (!list.length) { $("detailSum").innerHTML = ""; $("detail").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
+  const val = r => (wi < 0 ? r.total : r.waves[wi][0]);
+  const vals = list.map(val).sort((a, b) => a - b);
+  const median = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
+
+  // ノルマ達成（金イクラ ≥ ノルマ）の回数。合計には無い
+  let quotaText = "";
+  if (wi >= 0) {
+    const ok = list.filter(r => r.waves[wi][0] >= r.waves[wi][1]).length;
+    quotaText = `<span>ノルマ達成 <b>${ok}</b>/${list.length}回（${Math.round(ok / list.length * 100)}%）</span>`;
+  }
+  $("detailSum").innerHTML =
+    `<span>回数 <b>${list.length}</b>回</span><span>最高 <b>${vals[vals.length - 1]}</b></span>` +
+    `<span>最低 <b>${vals[0]}</b></span><span>平均 <b>${r1(avg(vals))}</b></span><span>中央値 <b>${median}</b></span>` + quotaText;
+
+  // 金イクラの数ごとに、何回出たか
+  const map = new Map();
+  for (const r of list) {
+    const v = val(r);
+    if (!map.has(v)) map.set(v, []);
+    map.get(v).push(r);
+  }
+  const most = Math.max(...[...map.values()].map(a => a.length));
+  const top = vals[vals.length - 1];
+  const rows = [...map.entries()].sort((a, b) => b[0] - a[0]).map(([v, rs]) => {
+    const last = rs[rs.length - 1].d;
+    const under = wi >= 0 && rs.every(r => r.waves[wi][0] < r.waves[wi][1]);
+    return `<tr class="${v === top ? "top" : ""}${under ? " under" : ""}"><td>${v}個</td><td>${rs.length}回</td>
+      <td>${Math.round(rs.length / list.length * 1000) / 10}%</td>
+      <td class="bar"><span class="b" style="width:${rs.length / most * 100}%"></span></td>
+      <td class="q">${fmtDate(last)} ${fmtTime(last)}</td></tr>`;
+  });
+  $("detail").innerHTML = `<thead><tr><th>金イクラ</th><th>回数</th><th>割合</th><th></th><th>最後に出した日時</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+}
+
 let chartKey = "合計";  // "合計" か "WAVE1" 〜
 
 function renderChartTabs() {
@@ -382,7 +446,7 @@ function renderAll() {
 }
 
 function render() {
-  renderContestPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderGroups(); renderContests(); renderAll();
+  renderContestPicker(); renderCards(); renderWaves(); renderChartTabs(); renderChart(); renderDetail(); renderGroups(); renderContests(); renderAll();
   const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
 }
