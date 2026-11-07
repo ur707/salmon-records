@@ -128,6 +128,14 @@
   #hours td.bar { width: 35%; text-align: left; }
   #hours .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
   #hours tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
+  .disttable td.bar { width: 45%; text-align: left; }
+  .disttable .b { display: block; height: 12px; border-radius: 3px; background: var(--accent); min-width: 2px; }
+  .disttable tr.under .b { background: var(--muted); opacity: .5; }
+  .disttable tr.top td:first-child { color: var(--accent-ink); font-weight: 800; }
+  .pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .pager:empty { display: none; }
+  .pager button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 5px 14px; border-radius: 99px; cursor: pointer; }
+  .pager button:disabled { opacity: .4; cursor: default; }
   #shiftList tr[data-k] { cursor: pointer; }
   #shiftList tr.sel td { background: var(--accent-soft); }
   .kind { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px;
@@ -189,7 +197,8 @@
     <div class="tabs" role="tablist" id="detailTabs"></div>
     <div class="panel">
       <div class="dsum" id="detailSum"></div>
-      <div class="dist"><table id="detail"></table></div>
+      <div class="scroll"><table id="detail" class="disttable"></table></div>
+      <div class="pager" id="detailPager"></div>
     </div>
   </section>
 
@@ -268,6 +277,7 @@ function select(k) {
   selected = k;
   runs = pick(k);
   shown = 30;
+  detailPage = 0;
   try { history.replaceState(null, "", "#" + encodeURIComponent(k)); } catch (e) {}
   render();
 }
@@ -489,6 +499,8 @@ function renderWaves() {
 }
 
 let detailKey = "WAVE1";  // 詳細を見るWAVE（"合計" も可）
+let detailPage = 0;       // 何ページ目か（0から）
+const DETAIL_PER_PAGE = 50;
 
 function renderDetail() {
   const maxW = Math.max(0, ...runs.map(r => r.waves.length));
@@ -496,7 +508,7 @@ function renderDetail() {
   if (!keys.includes(detailKey)) detailKey = keys[0] || "合計";
   $("detailTabs").innerHTML = keys.map(k =>
     `<button role="tab" aria-selected="${k === detailKey}" data-k="${k}">${k.replace("WAVE", "WAVE ")}</button>`).join("");
-  $("detailTabs").querySelectorAll("button").forEach(b => b.onclick = () => { detailKey = b.dataset.k; renderDetail(); });
+  $("detailTabs").querySelectorAll("button").forEach(b => b.onclick = () => { detailKey = b.dataset.k; detailPage = 0; renderDetail(); });
 
   const wi = detailKey === "合計" ? -1 : Number(detailKey.slice(4)) - 1;
   const list = wi < 0 ? runs : runs.filter(r => r.waves[wi]);
@@ -532,7 +544,18 @@ function renderDetail() {
       <td class="bar"><span class="b" style="width:${rs.length / most * 100}%"></span></td>
       <td class="q">${fmtDate(last)} ${fmtTime(last)}</td></tr>`;
   });
-  $("detail").innerHTML = `<thead><tr><th>金イクラ</th><th>回数</th><th>割合</th><th></th><th>最後に出した日時</th></tr></thead><tbody>${rows.join("")}</tbody>`;
+  // 多い順に50件ずつ表示して、ページを切り替えられるようにする
+  const pages = Math.max(1, Math.ceil(rows.length / DETAIL_PER_PAGE));
+  detailPage = Math.min(detailPage, pages - 1);
+  const from = detailPage * DETAIL_PER_PAGE;
+  $("detail").innerHTML = `<thead><tr><th>金イクラ</th><th>回数</th><th>割合</th><th></th><th>最後に出した日時</th></tr></thead>` +
+    `<tbody>${rows.slice(from, from + DETAIL_PER_PAGE).join("")}</tbody>`;
+  $("detailPager").innerHTML = pages > 1
+    ? `<button data-p="${detailPage - 1}"${detailPage === 0 ? " disabled" : ""}>← 前へ</button>
+       <span>${from + 1}〜${Math.min(from + DETAIL_PER_PAGE, rows.length)}件目 / 全${rows.length}件（${detailPage + 1}/${pages}ページ）</span>
+       <button data-p="${detailPage + 1}"${detailPage === pages - 1 ? " disabled" : ""}>次へ →</button>`
+    : "";
+  $("detailPager").querySelectorAll("button").forEach(b => b.onclick = () => { detailPage = Number(b.dataset.p); renderDetail(); });
 }
 
 let chartKey = "合計";  // "合計" か "WAVE1" 〜
@@ -664,6 +687,7 @@ document.querySelectorAll("#clearFilter button").forEach(b => b.addEventListener
   document.querySelectorAll("#clearFilter button").forEach(x => x.setAttribute("aria-selected", x === b));
   runs = pick(selected);
   shown = 30;
+  detailPage = 0;
   render();
 }));
 async function getJson(name, fallback) {
