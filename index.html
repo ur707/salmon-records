@@ -84,9 +84,14 @@
   .chart .tick.day { fill: var(--ink); font-weight: 700; }
   .chart .vtick { stroke: var(--muted); }
   .chart .brk { stroke: var(--muted); stroke-dasharray: 3 4; opacity: .6; }
-  .chart .pt { fill: var(--muted); opacity: .7; }
-  .chart .pt.fail { fill: var(--panel); stroke: #d9534f; stroke-width: 1.8; opacity: 1; }
-  .chart .pt.rec { fill: var(--gold); opacity: 1; }
+  .chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+  .chart .bestref { stroke: var(--gold); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .chart .pt { fill: var(--accent-ink); }
+  .chart .pt.fail { fill: var(--panel); stroke: #d9534f; stroke-width: 2; }
+  .chart .pt.rec { fill: var(--gold); }
+  .chart .bar.ok { fill: var(--accent); }
+  .chart .bar.fail { fill: #e8908d; }
+  .chart .bar.rec { fill: var(--gold); }
   .chart .best { fill: none; stroke: var(--accent); stroke-width: 3; }
   .chart .avg { fill: none; stroke: #4f8ff7; stroke-width: 2; opacity: .85; }
   .chart .endlabel { font-size: 12px; font-weight: 800; }
@@ -100,7 +105,8 @@
   .legend .lg { display: inline-block; vertical-align: middle; margin-right: 6px; }
   .legend .lg.best { width: 16px; height: 3px; background: var(--accent); border-radius: 2px; }
   .legend .lg.avg { width: 16px; height: 2px; background: #4f8ff7; }
-  .legend .lg.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .legend .lg.bestref { width: 16px; height: 0; border-top: 2px dashed var(--gold); }
+  .legend .lg.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-ink); }
   .legend .lg.dot.fail { background: var(--panel); border: 1.8px solid #d9534f; }
   .legend .lg.dot.rec { background: var(--gold); }
   .legend .lg.brk { width: 0; height: 12px; border-left: 2px dashed var(--muted); }
@@ -200,6 +206,10 @@
     <h2>イクラの推移</h2>
     <div class="chartbar">
       <div class="tabs" role="tablist" id="chartTabs"></div>
+      <div class="tabs" role="tablist" id="chartType">
+        <button role="tab" aria-selected="false" data-t="line">折れ線</button>
+        <button role="tab" aria-selected="true" data-t="bar">棒グラフ</button>
+      </div>
       <div class="tabs" role="tablist" id="chartRange">
         <button role="tab" aria-selected="false" data-n="30">直近30回</button>
         <button role="tab" aria-selected="false" data-n="100">直近100回</button>
@@ -212,8 +222,7 @@
         <div class="tip" id="chartTip" hidden></div>
       </div>
       <div class="legend">
-        <span><i class="lg best"></i>最高記録</span>
-        <span><i class="lg avg"></i>直近10回の平均</span>
+        <span><i class="lg bestref"></i>最高記録の高さ</span>
         <span><i class="lg dot"></i>クリア</span>
         <span><i class="lg dot fail"></i>失敗</span>
         <span><i class="lg dot rec"></i>最高記録を更新</span>
@@ -602,6 +611,7 @@ function renderChartTabs() {
 }
 
 let chartRange = 0;  // 0 = すべて、それ以外は直近N回
+let chartType = "bar";  // line = 折れ線 / bar = 棒グラフ
 let chartPts = [];   // ツールチップ用 [{x, y, r}]
 
 function renderChart() {
@@ -613,12 +623,12 @@ function renderChart() {
   tip.hidden = true;
   if (all.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; chartPts = []; return; }
 
-  // 最高記録の線・平均は「すべて」の流れで計算して、表示する範囲だけ切り出す
+  // 「最高記録を更新した回」は「すべて」の流れで判定して、表示する範囲だけ切り出す
   const vals = all.map(val);
   const bestAt = [];
   let b = -Infinity;
   vals.forEach(v => { b = Math.max(b, v); bestAt.push(b); });
-  const maAt = vals.map((_, i) => avg(vals.slice(Math.max(0, i - 9), i + 1)));
+  const bars = chartType === "bar";
   const start = chartRange && all.length > chartRange ? all.length - chartRange : 0;
   const list = all.slice(start);
   const n = list.length;
@@ -633,7 +643,9 @@ function renderChart() {
   const u = wi === -2 ? 500 : 10;
   const pad = Math.max(u, (hi - lo) * 0.08);
   lo = Math.max(0, Math.floor((lo - pad) / u) * u); hi = Math.ceil((hi + pad) / u) * u;
-  const x = i => L + (n === 1 ? (W - L - R) / 2 : (i / (n - 1)) * (W - L - R));
+  if (bars) lo = 0;  // 棒グラフは0から（棒の長さで比べられるように）
+  const slot = (W - L - R) / n;
+  const x = i => bars ? L + (i + 0.5) * slot : L + (n === 1 ? (W - L - R) / 2 : (i / (n - 1)) * (W - L - R));
   const y = val_ => T + (1 - (val_ - lo) / (hi - lo)) * (H - T - B);
 
   const label = wi === -2 ? "赤イクラの推移" : chartKey.replace("WAVE", "WAVE ") + "の金イクラの推移";
@@ -674,33 +686,31 @@ function renderChart() {
       <text class="tick${t.rank === 0 ? " day" : ""}" x="${tx}" y="${H - 9}" text-anchor="middle">${t.text}</text>`;
   }
 
-  // 最高記録（階段）と直近10回の平均
-  let path = "";
-  list.forEach((_, i) => {
-    const bv = bestAt[start + i];
-    path += i === 0 ? `M${x(0)},${y(bv)}` : bv !== bestAt[start + i - 1] ? `H${x(i)}V${y(bv)}` : "";
-  });
-  path += `H${x(n - 1)}`;
-  svg += `<path class="avg" d="${list.map((_, i) => `${i ? "L" : "M"}${x(i)},${y(maAt[start + i])}`).join("")}"/>`;
-  svg += `<path class="best" d="${path}"/>`;
+  // 最高記録の高さに薄い点線（右端に数字）
+  const top = bestAt[all.length - 1];
+  svg += `<line class="bestref" x1="${L}" x2="${W - R}" y1="${y(top)}" y2="${y(top)}"/>
+    <text class="endlabel best" x="${W - R + 6}" y="${y(top) + 4}">${top}</text>`;
 
-  // 点: クリア＝灰色、失敗＝赤い輪、最高記録を更新＝金色
+  // クリア＝灰色、失敗＝赤、最高記録を更新＝金色
   const r0 = n > 120 ? 2.5 : n > 50 ? 3.2 : 4;
+  const kindOfRun = (r, gi) => (gi > 0 && vals[gi] > bestAt[gi - 1] ? "rec" : r.clear === false ? "fail" : "ok");
   chartPts = [];
-  list.forEach((r, i) => {
-    const gi = start + i;
-    const isRec = gi > 0 && vals[gi] > bestAt[gi - 1];
-    const cls = isRec ? "pt rec" : r.clear === false ? "pt fail" : "pt";
-    svg += `<circle class="${cls}" cx="${x(i)}" cy="${y(v(i))}" r="${isRec ? r0 + 1.5 : r0}"/>`;
-    chartPts.push({ x: x(i), y: y(v(i)), r, v: v(i), rec: isRec });
-  });
-
-  // 右端に今の最高と平均の数字
-  const lastBest = bestAt[all.length - 1], lastMa = maAt[all.length - 1];
-  let yb = y(lastBest) + 4, ya = y(lastMa) + 4;
-  if (Math.abs(yb - ya) < 14) ya = yb + 14;  // 重ならないようにずらす
-  svg += `<text class="endlabel best" x="${W - R + 6}" y="${yb}">${lastBest}</text>`;
-  svg += `<text class="endlabel avg" x="${W - R + 6}" y="${Math.min(H - B, ya)}">${wi === -2 ? Math.round(lastMa) : r1(lastMa)}</text>`;
+  if (bars) {
+    const bw = Math.max(2, Math.min(28, slot * 0.72));
+    list.forEach((r, i) => {
+      const k = kindOfRun(r, start + i);
+      svg += `<rect class="bar ${k}" x="${x(i) - bw / 2}" y="${y(v(i))}" width="${bw}" height="${Math.max(1, y(lo) - y(v(i)))}" rx="${Math.min(3, bw / 3)}"/>`;
+      chartPts.push({ x: x(i), y: y(v(i)), r, v: v(i), rec: k === "rec" });
+    });
+  } else {
+    // 1回ごとの記録を順番に線で結ぶ
+    svg += `<path class="line" d="${list.map((_, i) => `${i ? "L" : "M"}${x(i)},${y(v(i))}`).join("")}"/>`;
+    list.forEach((r, i) => {
+      const k = kindOfRun(r, start + i);
+      svg += `<circle class="pt ${k}" cx="${x(i)}" cy="${y(v(i))}" r="${k === "rec" ? r0 + 1.5 : r0}"/>`;
+      chartPts.push({ x: x(i), y: y(v(i)), r, v: v(i), rec: k === "rec" });
+    });
+  }
   svg += `<g id="chartHover"></g></svg>`;
   $("chart").innerHTML = svg;
 
@@ -730,6 +740,11 @@ function renderChart() {
   el.addEventListener("pointerleave", () => { tip.hidden = true; $("chartHover").innerHTML = ""; });
 }
 
+document.querySelectorAll("#chartType button").forEach(b => b.addEventListener("click", () => {
+  chartType = b.dataset.t;
+  document.querySelectorAll("#chartType button").forEach(x => x.setAttribute("aria-selected", x === b));
+  renderChart();
+}));
 document.querySelectorAll("#chartRange button").forEach(b => b.addEventListener("click", () => {
   chartRange = Number(b.dataset.n);
   document.querySelectorAll("#chartRange button").forEach(x => x.setAttribute("aria-selected", x === b));
