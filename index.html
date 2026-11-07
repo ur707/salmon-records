@@ -79,6 +79,9 @@
   .chart svg { width: 100%; height: auto; display: block; }
   .chart .axis { stroke: var(--line); }
   .chart .tick { fill: var(--muted); font-size: 11px; }
+  .chart .tick.day { fill: var(--ink); font-weight: 700; }
+  .chart .vtick { stroke: var(--muted); }
+  .chart .brk { stroke: var(--muted); stroke-dasharray: 3 4; opacity: .6; }
   .chart .runs { fill: var(--muted); opacity: .55; }
   .chart .runs.new { fill: var(--gold); opacity: 1; }
   .chart .best { fill: none; stroke: var(--accent); stroke-width: 2.5; }
@@ -170,6 +173,7 @@
         <span><i style="background:var(--accent)"></i>最高記録</span>
         <span><i style="background:var(--ink);opacity:.5"></i>直近10回の平均</span>
         <span><i style="background:var(--gold);height:8px;width:8px;border-radius:50%"></i>記録更新したバイト</span>
+        <span><i style="border-left:2px dashed var(--muted);width:2px;height:12px;background:none"></i>1時間以上あいたところ</span>
       </div>
     </div>
   </section>
@@ -499,12 +503,39 @@ function renderChart() {
     svg += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
       <text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
   }
-  // 日付の目盛り（日が変わったところ）
+  // 横軸の目盛り（並べ方はバイトの順番のまま）
+  //   ・日付が変わった最初のバイト: 「11/14 20:05」（太字）
+  //   ・1時間以上あいた後の最初のバイト: 休憩の区切り線と時刻
+  //   ・そのほか: だいたい等間隔に時刻
+  const cand = [];
   let lastDay = "";
   list.forEach((r, i) => {
     const k = dayKey(r.d);
-    if (k !== lastDay) { svg += `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">${fmtDate(r.d)}</text>`; lastDay = k; }
+    if (k !== lastDay) { cand.push({ i, text: `${fmtDate(r.d)} ${fmtTime(r.d)}`, rank: 0 }); lastDay = k; }
+    else if (i && r.d - list[i - 1].d > 3600e3) cand.push({ i, text: fmtTime(r.d), rank: 1 });
   });
+  const every = Math.max(1, Math.round(n / 8));
+  for (let i = 0; i < n; i += every) cand.push({ i, text: fmtTime(list[i].d), rank: 2 });
+  if (n > 1) cand.push({ i: n - 1, text: fmtTime(list[n - 1].d), rank: 3 });
+  // 大事な目盛りから順に、文字が重ならないものだけ使う
+  const ticks = [];
+  for (const c of cand.sort((a, b) => a.rank - b.rank)) {
+    const room = c.rank === 0 ? 46 : 30;  // 文字の半分くらいの幅
+    if (ticks.some(t => t.i === c.i || Math.abs(x(t.i) - x(c.i)) < room + (t.rank === 0 ? 46 : 30))) continue;
+    ticks.push(c);
+  }
+  // 休憩の区切り線（1時間以上あいたところ）
+  list.forEach((r, i) => {
+    if (i && r.d - list[i - 1].d > 3600e3) {
+      const bx = (x(i - 1) + x(i)) / 2;
+      svg += `<line class="brk" x1="${bx}" x2="${bx}" y1="${T}" y2="${H - B}"><title>${fmtDate(list[i - 1].d)} ${fmtTime(list[i - 1].d)} 〜 ${fmtDate(r.d)} ${fmtTime(r.d)} は休憩</title></line>`;
+    }
+  });
+  for (const t of ticks) {
+    const tx = Math.min(W - R - (t.rank === 0 ? 40 : 16), Math.max(L + (t.rank === 0 ? 40 : 16), x(t.i)));
+    svg += `<line class="vtick" x1="${x(t.i)}" x2="${x(t.i)}" y1="${H - B}" y2="${H - B + 5}"/>
+      <text class="tick${t.rank === 0 ? " day" : ""}" x="${tx}" y="${H - 8}" text-anchor="middle">${t.text}</text>`;
+  }
   // 最高記録（階段）
   let best = -1, path = "";
   list.forEach((r, i) => {
