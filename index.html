@@ -225,7 +225,7 @@
         <span><i class="lg bestref"></i>最高記録の高さ</span>
         <span><i class="lg dot"></i>クリア</span>
         <span><i class="lg dot fail"></i>失敗</span>
-        <span><i class="lg dot rec"></i>最高記録を更新</span>
+        <span><i class="lg dot rec"></i>最高記録のバイト</span>
         <span><i class="lg brk"></i>1時間以上あいたところ</span>
       </div>
       <div class="q" style="margin-top:4px">点にマウスを乗せる（スマホはタップ）と、そのバイトの記録が出ます</div>
@@ -691,9 +691,9 @@ function renderChart() {
   svg += `<line class="bestref" x1="${L}" x2="${W - R}" y1="${y(top)}" y2="${y(top)}"/>
     <text class="endlabel best" x="${W - R + 6}" y="${y(top) + 4}">${top}</text>`;
 
-  // クリア＝灰色、失敗＝赤、最高記録を更新＝金色
+  // クリア＝緑、失敗＝赤、いまの最高記録を出したバイト＝金色
   const r0 = n > 120 ? 2.5 : n > 50 ? 3.2 : 4;
-  const kindOfRun = (r, gi) => (gi > 0 && vals[gi] > bestAt[gi - 1] ? "rec" : r.clear === false ? "fail" : "ok");
+  const kindOfRun = (r, gi) => (vals[gi] === top ? "rec" : r.clear === false ? "fail" : "ok");
   chartPts = [];
   if (bars) {
     const bw = Math.max(2, Math.min(28, slot * 0.72));
