@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>サーモンラン バイト記録</title>
+<meta name="description" content="配信中のサーモンランのリザルトを自動で集計した記録ページ">
+<style>
+  :root {
+    --bg: #f4f5f0;
+    --panel: #ffffff;
+    --ink: #1b1d17;
+    --muted: #6b6f63;
+    --line: #e2e4dc;
+    --accent: #9bc400;
+    --accent-ink: #4d6300;
+    --accent-soft: #eef7cc;
+    --gold: #c98a00;
+    --shadow: 0 1px 2px rgba(20, 24, 10, .06), 0 4px 16px rgba(20, 24, 10, .05);
+    --font: "Noto Sans JP", "Yu Gothic UI", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121410;
+      --panel: #1b1e18;
+      --ink: #eef0e8;
+      --muted: #9a9f90;
+      --line: #2c3027;
+      --accent: #c6f432;
+      --accent-ink: #c6f432;
+      --accent-soft: #2a3313;
+      --gold: #ffc23d;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--font); line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 24px; }
+  h1 { font-size: clamp(22px, 4vw, 30px); margin: 0; letter-spacing: .02em; }
+  h1 .mark { display: inline-block; width: .55em; height: .55em; border-radius: 3px; background: var(--accent); margin-right: .4em; transform: translateY(-.1em); }
+  .updated { color: var(--muted); font-size: 13px; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  section { margin-top: 28px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 18px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .card .label { color: var(--muted); font-size: 12px; }
+  .card .value { font-size: 30px; font-weight: 800; line-height: 1.2; margin-top: 2px; }
+  .card .value small { font-size: 14px; font-weight: 600; margin-left: 2px; color: var(--muted); }
+  .card .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .card.best { border-color: var(--accent); background: linear-gradient(0deg, var(--accent-soft), var(--panel)); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  th:first-child, td:first-child { text-align: left; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tr.total td { font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  .q { color: var(--muted); font-size: 12px; }
+  .rec { color: var(--gold); font-weight: 700; }
+  .badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent-ink); margin-left: 4px; }
+  td.hl { color: var(--accent-ink); font-weight: 800; }
+
+  .tabs { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 3px; margin-bottom: 12px; }
+  .tabs button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--muted); padding: 4px 14px; border-radius: 99px; cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--panel); color: var(--ink); font-weight: 700; box-shadow: var(--shadow); }
+
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .axis { stroke: var(--line); }
+  .chart .tick { fill: var(--muted); font-size: 11px; }
+  .chart .runs { fill: var(--muted); opacity: .55; }
+  .chart .runs.new { fill: var(--gold); opacity: 1; }
+  .chart .best { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+  .chart .avg { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 4; opacity: .5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  .more { margin-top: 10px; text-align: center; }
+  .more button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 18px; border-radius: 99px; cursor: pointer; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 40px; }
+  @media (max-width: 560px) {
+    .wrap { padding-top: 20px; }
+    .panel { padding: 12px; }
+    th, td { padding: 7px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="mark"></span>サーモンラン バイト記録</h1>
+    <div class="updated" id="updated"></div>
+  </header>
+
+  <div class="cards" id="cards"></div>
+
+  <section>
+    <h2>WAVEごとの記録</h2>
+    <div class="panel scroll"><table id="waves"></table></div>
+  </section>
+
+  <section>
+    <h2>合計金イクラの推移</h2>
+    <div class="panel chart">
+      <div id="chart"></div>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>最高記録</span>
+        <span><i style="background:var(--ink);opacity:.5"></i>直近10回の平均</span>
+        <span><i style="background:var(--gold);height:8px;width:8px;border-radius:50%"></i>記録更新したバイト</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>配信ごと・日ごと</h2>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-group="session">配信ごと</button>
+      <button role="tab" aria-selected="false" data-group="day">日ごと</button>
+    </div>
+    <div class="panel scroll"><table id="groups"></table></div>
+  </section>
+
+  <section>
+    <h2>全リザルト</h2>
+    <div class="panel scroll"><table id="all"></table></div>
+    <div class="more" id="more"></div>
+  </section>
+
+  <footer>配信のリザルト画面から自動で読み取った記録です。読み取れなかったバイトは含まれていません。</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmtDate = d => `${d.getMonth() + 1}/${d.getDate()}`;
+const fmtTime = d => `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+const avg = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+const r1 = x => (Math.round(x * 10) / 10).toFixed(1);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+let runs = [];
+let group = "session";
+let shown = 30;
+
+function card(label, value, unit, sub, cls = "") {
+  return `<div class="card ${cls}"><div class="label">${label}</div>
+    <div class="value">${value}<small>${unit}</small></div><div class="sub">${sub}</div></div>`;
+}
+
+function renderCards() {
+  if (!runs.length) { $("cards").innerHTML = ""; return; }
+  const totals = runs.map(r => r.total);
+  const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
+  const recent = totals.slice(-10);
+  const days = new Set(runs.map(r => dayKey(r.d))).size;
+  $("cards").innerHTML =
+    card("最高合計", best.total, "個", `${fmtDate(best.d)} ${fmtTime(best.d)}`, "best") +
+    card("平均合計", r1(avg(totals)), "個", `全${runs.length}回`) +
+    card("直近10回の平均", r1(avg(recent)), "個", `${recent.length}回分`) +
+    card("バイト回数", runs.length, "回", `${days}日・${new Set(runs.map(r => r.session)).size}配信`);
+}
+
+function renderWaves() {
+  const maxW = Math.max(0, ...runs.map(r => r.waves.length));
+  if (!maxW) { $("waves").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
+  let rows = "";
+  for (let i = 0; i < maxW; i++) {
+    const hit = runs.filter(r => r.waves[i]);
+    const eggs = hit.map(r => r.waves[i][0]);
+    const quotas = hit.map(r => r.waves[i][1]);
+    const best = Math.max(...eggs);
+    const bestRun = hit.find(r => r.waves[i][0] === best);
+    rows += `<tr><td>WAVE ${i + 1}</td><td class="hl">${best}</td><td>${r1(avg(eggs))}</td>
+      <td>${r1(avg(quotas))}</td><td>${hit.length}</td><td class="q">${fmtDate(bestRun.d)}</td></tr>`;
+  }
+  const totals = runs.map(r => r.total);
+  const best = runs.reduce((a, b) => (b.total > a.total ? b : a));
+  rows += `<tr class="total"><td>合計</td><td class="hl">${best.total}</td><td>${r1(avg(totals))}</td>
+    <td></td><td>${runs.length}</td><td class="q">${fmtDate(best.d)}</td></tr>`;
+  $("waves").innerHTML = `<thead><tr><th></th><th>最高</th><th>平均</th><th>平均ノルマ</th><th>回数</th><th>最高を出した日</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderChart() {
+  if (runs.length < 2) { $("chart").innerHTML = `<div class="empty">2回以上のリザルトがたまるとグラフが出ます</div>`; return; }
+  const W = 960, H = 300, L = 44, R = 12, T = 12, B = 30;
+  const n = runs.length;
+  const totals = runs.map(r => r.total);
+  let lo = Math.min(...totals), hi = Math.max(...totals);
+  const pad = Math.max(10, (hi - lo) * 0.1);
+  lo = Math.max(0, Math.floor((lo - pad) / 10) * 10); hi = Math.ceil((hi + pad) / 10) * 10;
+  const x = i => L + (n === 1 ? 0 : (i / (n - 1)) * (W - L - R));
+  const y = v => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="合計金イクラの推移">`;
+  const step = Math.max(10, Math.ceil((hi - lo) / 5 / 10) * 10);
+  for (let v = lo; v <= hi; v += step) {
+    svg += `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/>
+      <text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  }
+  // 日付の目盛り（日が変わったところ）
+  let lastDay = "";
+  runs.forEach((r, i) => {
+    const k = dayKey(r.d);
+    if (k !== lastDay) { svg += `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">${fmtDate(r.d)}</text>`; lastDay = k; }
+  });
+  // 最高記録（階段）
+  let best = -1, path = "";
+  runs.forEach((r, i) => {
+    if (r.total > best) { path += best < 0 ? `M${x(i)},${y(r.total)}` : `H${x(i)}V${y(r.total)}`; best = r.total; }
+  });
+  path += `H${x(n - 1)}`;
+  svg += `<path class="best" d="${path}"/>`;
+  // 直近10回の平均
+  const ma = totals.map((_, i) => avg(totals.slice(Math.max(0, i - 9), i + 1)));
+  svg += `<path class="avg" d="${ma.map((v, i) => `${i ? "L" : "M"}${x(i)},${y(v)}`).join("")}"/>`;
+  // 各バイト
+  runs.forEach((r, i) => {
+    const isNew = r.new && r.new.includes("合計");
+    svg += `<circle class="runs${isNew ? " new" : ""}" cx="${x(i)}" cy="${y(r.total)}" r="${isNew ? 5 : 3.5}">
+      <title>${fmtDate(r.d)} ${fmtTime(r.d)}  合計 ${r.total}個</title></circle>`;
+  });
+  $("chart").innerHTML = svg + "</svg>";
+}
+
+function renderGroups() {
+  const map = new Map();
+  for (const r of runs) {
+    const k = group === "session" ? r.session : dayKey(r.d);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(r);
+  }
+  const rows = [...map.entries()].reverse().map(([k, list]) => {
+    const totals = list.map(r => r.total);
+    const first = list[0].d;
+    const label = group === "session"
+      ? `${fmtDate(first)} ${k.length >= 16 ? k.slice(11, 16) : ""} の配信`
+      : `${fmtDate(first)}（${"日月火水木金土"[first.getDay()]}）`;
+    const rec = list.some(r => r.new && r.new.length);
+    return `<tr><td>${esc(label)}${rec ? '<span class="badge">記録更新</span>' : ""}</td><td>${list.length}</td>
+      <td>${r1(avg(totals))}</td><td class="hl">${Math.max(...totals)}</td><td>${Math.min(...totals)}</td></tr>`;
+  });
+  $("groups").innerHTML = rows.length
+    ? `<thead><tr><th></th><th>回数</th><th>平均合計</th><th>最高</th><th>最低</th></tr></thead><tbody>${rows.join("")}</tbody>`
+    : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
+}
+
+function renderAll() {
+  const maxW = Math.max(0, ...runs.map(r => r.waves.length));
+  const list = runs.slice().reverse().slice(0, shown);
+  const head = `<tr><th>日時</th>${Array.from({ length: maxW }, (_, i) => `<th>W${i + 1}</th>`).join("")}<th>合計</th></tr>`;
+  const body = list.map(r => {
+    const cells = Array.from({ length: maxW }, (_, i) => {
+      const w = r.waves[i];
+      if (!w) return "<td></td>";
+      const isNew = r.new && r.new.includes(`WAVE${i + 1}`);
+      return `<td${isNew ? ' class="rec"' : ""}>${w[0]}<span class="q">/${w[1]}</span></td>`;
+    }).join("");
+    const isNew = r.new && r.new.includes("合計");
+    return `<tr><td>${fmtDate(r.d)} ${fmtTime(r.d)}</td>${cells}<td${isNew ? ' class="rec"' : ""}><b>${r.total}</b></td></tr>`;
+  }).join("");
+  $("all").innerHTML = runs.length ? `<thead>${head}</thead><tbody>${body}</tbody>`
+    : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
+  $("more").innerHTML = runs.length > shown ? `<button id="moreBtn">もっと見る（残り${runs.length - shown}件）</button>` : "";
+  const btn = $("moreBtn");
+  if (btn) btn.onclick = () => { shown += 50; renderAll(); };
+}
+
+function render() {
+  renderCards(); renderWaves(); renderChart(); renderGroups(); renderAll();
+  const last = runs[runs.length - 1];
+  $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
+}
+
+document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => {
+  group = b.dataset.group;
+  document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+  renderGroups();
+}));
+
+async function load() {
+  try {
+    const res = await fetch("results.json?t=" + Date.now(), { cache: "no-store" });
+    const data = await res.json();
+    runs = data.map(r => ({ ...r, d: new Date(r.time) })).sort((a, b) => a.d - b.d);
+  } catch (e) {
+    runs = [];
+  }
+  render();
+}
+load();
+setInterval(load, 60000); // 開いたままでも1分ごとに最新にする
+</script>
+</body>
+</html>
