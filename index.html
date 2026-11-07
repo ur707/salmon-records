@@ -85,6 +85,18 @@
   .more { margin-top: 10px; text-align: center; }
   .more button { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 18px; border-radius: 99px; cursor: pointer; }
   footer { color: var(--muted); font-size: 12px; margin-top: 40px; }
+
+  .contest { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-bottom: 12px; }
+  .pick { display: flex; align-items: center; gap: 10px; }
+  .pick .label { color: var(--muted); font-size: 12px; }
+  .pick select { font: inherit; font-size: 15px; font-weight: 700; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; max-width: 100%; }
+  .contest .info { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); }
+  .contest .info b { color: var(--ink); font-weight: 700; }
+  .live { display: inline-block; font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 99px;
+    background: var(--accent); color: #1b1d17; margin-right: 6px; }
+  #contests tr { cursor: pointer; }
+  #contests tr.sel td { background: var(--accent-soft); }
   @media (max-width: 560px) {
     .wrap { padding-top: 20px; }
     .panel { padding: 12px; }
@@ -98,6 +110,14 @@
     <h1><span class="mark"></span>サーモンラン バイト記録</h1>
     <div class="updated" id="updated"></div>
   </header>
+
+  <div class="contest panel">
+    <label class="pick">
+      <span class="label">コンテスト</span>
+      <select id="contest"></select>
+    </label>
+    <div class="info" id="contestInfo"></div>
+  </div>
 
   <div class="cards" id="cards"></div>
 
@@ -128,6 +148,11 @@
   </section>
 
   <section>
+    <h2>コンテスト一覧</h2>
+    <div class="panel scroll"><table id="contests"></table></div>
+  </section>
+
+  <section>
     <h2>全リザルト</h2>
     <div class="panel scroll"><table id="all"></table></div>
     <div class="more" id="more"></div>
@@ -145,9 +170,71 @@ const r1 = x => (Math.round(x * 10) / 10).toFixed(1);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-let runs = [];
+let allRuns = [];   // 全リザルト
+let runs = [];      // 選んでいるコンテストのリザルト
+let contests = {};  // contests.json（コンテストの期間・ステージ・ブキ）
+let selected = null;
 let group = "session";
 let shown = 30;
+const REGULAR = "regular";
+const keyOf = r => r.contest || REGULAR;
+const startOf = k => {
+  const c = contests[k];
+  return new Date(c && c.start ? c.start : k.replace(" ", "T"));
+};
+const fmtFull = d => `${fmtDate(d)}（${"日月火水木金土"[d.getDay()]}）${fmtTime(d)}`;
+
+function contestLabel(k) {
+  if (k === REGULAR) return "通常バイト";
+  const c = contests[k] || {};
+  const s = startOf(k);
+  const e = c.end ? new Date(c.end) : null;
+  return `${fmtDate(s)}${e ? "〜" + fmtDate(e) : ""} ${c.stage || ""}`.trim();
+}
+
+function contestKeys() {
+  const keys = [...new Set(allRuns.map(keyOf))];
+  return keys.sort((a, b) => (a === REGULAR) - (b === REGULAR) || startOf(b) - startOf(a));
+}
+
+function select(k) {
+  selected = k;
+  runs = allRuns.filter(r => keyOf(r) === k);
+  shown = 30;
+  try { history.replaceState(null, "", "#" + encodeURIComponent(k)); } catch (e) {}
+  render();
+}
+
+function renderContestPicker() {
+  const keys = contestKeys();
+  $("contest").innerHTML = keys.map(k => `<option value="${esc(k)}"${k === selected ? " selected" : ""}>${esc(contestLabel(k))}</option>`).join("")
+    || `<option>記録なし</option>`;
+  const c = contests[selected];
+  if (!selected || selected === REGULAR || !c) { $("contestInfo").innerHTML = ""; return; }
+  if (!c.end) { $("contestInfo").innerHTML = `<span>期間・ステージの情報はありません</span>`; return; }
+  const s = startOf(selected), e = c.end ? new Date(c.end) : null, now = new Date();
+  const live = e && s <= now && now < e;
+  $("contestInfo").innerHTML =
+    `<span>${live ? '<span class="live">開催中</span>' : ""}期間 <b>${fmtFull(s)}${e ? " 〜 " + fmtFull(e) : ""}</b></span>` +
+    (c.stage ? `<span>ステージ <b>${esc(c.stage)}</b></span>` : "") +
+    (c.weapons && c.weapons.length ? `<span>ブキ <b>${c.weapons.map(esc).join("・")}</b></span>` : "");
+}
+
+function renderContests() {
+  const rows = contestKeys().map(k => {
+    const list = allRuns.filter(r => keyOf(r) === k);
+    const totals = list.map(r => r.total);
+    return `<tr data-k="${esc(k)}"${k === selected ? ' class="sel"' : ""}><td>${esc(contestLabel(k))}</td>
+      <td>${list.length}</td><td class="hl">${Math.max(...totals)}</td><td>${r1(avg(totals))}</td></tr>`;
+  });
+  $("contests").innerHTML = rows.length
+    ? `<thead><tr><th></th><th>回数</th><th>最高合計</th><th>平均合計</th></tr></thead><tbody>${rows.join("")}</tbody>`
+    : `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`;
+  $("contests").querySelectorAll("tr[data-k]").forEach(tr => tr.onclick = () => {
+    select(tr.dataset.k);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+}
 
 function card(label, value, unit, sub, cls = "") {
   return `<div class="card ${cls}"><div class="label">${label}</div>
@@ -273,8 +360,8 @@ function renderAll() {
 }
 
 function render() {
-  renderCards(); renderWaves(); renderChart(); renderGroups(); renderAll();
-  const last = runs[runs.length - 1];
+  renderContestPicker(); renderCards(); renderWaves(); renderChart(); renderGroups(); renderContests(); renderAll();
+  const last = allRuns[allRuns.length - 1];
   $("updated").textContent = last ? `最終更新 ${fmtDate(last.d)} ${fmtTime(last.d)}` : "";
 }
 
@@ -284,14 +371,28 @@ document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click
   renderGroups();
 }));
 
-async function load() {
+$("contest").addEventListener("change", e => select(e.target.value));
+
+async function getJson(name, fallback) {
   try {
-    const res = await fetch("results.json?t=" + Date.now(), { cache: "no-store" });
-    const data = await res.json();
-    runs = data.map(r => ({ ...r, d: new Date(r.time) })).sort((a, b) => a.d - b.d);
+    const res = await fetch(name + "?t=" + Date.now(), { cache: "no-store" });
+    return res.ok ? await res.json() : fallback;
   } catch (e) {
-    runs = [];
+    return fallback;
   }
+}
+
+async function load() {
+  const [data, cs] = await Promise.all([getJson("results.json", []), getJson("contests.json", {})]);
+  contests = cs || {};
+  allRuns = (Array.isArray(data) ? data : []).map(r => ({ ...r, d: new Date(r.time) })).sort((a, b) => a.d - b.d);
+  const keys = contestKeys();
+  if (!selected || !keys.includes(selected)) {
+    const fromHash = decodeURIComponent(location.hash.slice(1));
+    const latest = allRuns.length ? keyOf(allRuns[allRuns.length - 1]) : null;
+    selected = keys.includes(fromHash) ? fromHash : latest;  // 最初は一番新しいリザルトのコンテスト
+  }
+  runs = allRuns.filter(r => keyOf(r) === selected);
   render();
 }
 load();
