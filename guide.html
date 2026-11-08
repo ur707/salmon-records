@@ -65,6 +65,50 @@
   .tl td.t { font-weight:700; width:80px; }
   .tl tr.lesser td { color:var(--muted); }
   .tl tr.gold td { color:var(--gold); font-weight:700; }
+  .player { margin:14px 0 0; max-width:820px; }
+  .player .ph { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin-bottom:6px; }
+  .player h3 { font-size:15px; margin:0; }
+  .pbtns { display:flex; flex-wrap:wrap; gap:6px; }
+  .player button { font:inherit; font-size:13px; font-weight:700; border:1px solid var(--line); background:var(--panel); color:var(--ink);
+    border-radius:99px; padding:3px 12px; cursor:pointer; }
+  .player button.on { background:var(--accent); border-color:var(--accent); color:#1b1d17; }
+  .stage { position:relative; background:#fff; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .stage img.sb { display:block; width:100%; height:auto; }
+  .stage .dot { position:absolute; width:9px; height:9px; margin:-4.5px 0 0 -4.5px; border-radius:50%; background:#9aa092; }
+  .stage .dot.fs { background:#1ca9c4; }
+  .stage .dot i { position:absolute; top:9px; left:50%; transform:translateX(-50%); font-style:normal; font-size:10px; font-weight:800; color:#6b6f63; white-space:nowrap; }
+  .stage .basket { position:absolute; transform:translate(-50%,-50%); font-size:11px; font-weight:800; color:#fff; background:#c98a00; border-radius:4px; padding:0 5px; }
+  .stage .mob { position:absolute; transform:translate(-50%,-50%) scale(.3); opacity:0; transition:opacity .35s, transform .35s;
+    display:flex; flex-direction:column; align-items:center; pointer-events:none; z-index:2; }
+  .stage .mob.on { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  .stage .mob img { width:40px; height:40px; border-radius:50%; background:#fff; border:3px solid #1b1d17; box-shadow:0 2px 6px rgba(0,0,0,.35); }
+  .stage .mob span { margin-top:1px; font-size:11px; font-weight:800; background:#1b1d17; color:#fff; border-radius:4px; padding:0 4px; white-space:nowrap; }
+  .stage .mob.gold img { border-color:#e0a800; } .stage .mob.gold span { background:#c98a00; }
+  .stage .mob.ch img { border-color:#d9534f; } .stage .mob.ch span { background:#d9534f; }
+  .stage .mob.fresh img { animation:pop .6s ease-out; }
+  @keyframes pop { 0% { box-shadow:0 0 0 0 rgba(155,196,0,.9); } 100% { box-shadow:0 0 0 18px rgba(155,196,0,0); } }
+  .stage .mob.lesser span { background:#9aa092; font-size:10px; }
+  .stage .mob.rush span { background:#d9534f; font-size:13px; padding:2px 8px; }
+  .stage .clock { position:absolute; left:10px; top:8px; background:rgba(27,29,23,.82); color:#fff; border-radius:10px; padding:4px 12px;
+    font-size:12px; font-weight:700; z-index:3; }
+  .stage .clock b { display:block; font-size:30px; line-height:1.05; font-variant-numeric:tabular-nums; }
+  .tlbar { position:relative; height:22px; margin:8px 6px 0; }
+  .tlbar::before { content:""; position:absolute; left:0; right:0; top:10px; height:3px; background:var(--line); border-radius:2px; }
+  .tlbar .mk { position:absolute; top:4px; width:10px; height:15px; margin-left:-5px; padding:0; border-radius:3px; border:0; background:#6b6f63; }
+  .tlbar .mk.gold { background:#e0a800; } .tlbar .mk.ch { background:#d9534f; }
+  .tlbar .needle { position:absolute; top:0; width:3px; height:22px; margin-left:-1.5px; background:var(--accent-ink); border-radius:2px; pointer-events:none; }
+  .ctrl { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:6px; }
+  .ctrl .seek { flex:1; min-width:140px; accent-color:var(--accent); }
+  .ctrl .spd { display:flex; gap:4px; }
+  .log { list-style:none; margin:8px 0 0; padding:0; font-size:13px; }
+  .log li { padding:3px 0; border-bottom:1px solid var(--line); }
+  .log li b { display:inline-block; width:40px; }
+  .log li.ch { color:#d9534f; } .log li.gold { color:var(--gold); }
+  .log li s { color:var(--muted); }
+  .log .pl { color:var(--muted); font-size:12px; }
+  .log .lm { margin-left:8px; font-size:12px; font-weight:700; color:var(--accent-ink); }
+  @media (max-width:560px) { .stage .mob img { width:26px; height:26px; border-width:2px; } .stage .mob span { font-size:9px; }
+    .stage .dot i { font-size:8px; } .stage .clock b { font-size:22px; } }
   .added { margin-top:16px; padding-top:12px; border-top:2px dashed var(--accent); }
   .added h3 { font-size:15px; margin:0 0 2px; }
   .pat { border:1px solid var(--line); border-radius:10px; padding:8px 12px; margin-top:10px; }
@@ -261,7 +305,7 @@
   </footer>
 </div>
 <script>
-const BASE = {"names": {"SakelienBomber": "バクダン", "SakelienTower": "タワー", "SakelienSnake": "ヘビ", "SakePillar": "ハシラ", "Sakerocket": "コウモリ", "SakeSaucer": "ナベブタ", "SakeDolphin": "ダイバー", "Sakediver": "モグラ", "SakelienCupTwins": "カタパッド", "SakelienShield": "テッパン", "SakelienGolden": "キンシャケ", "lessers": "ザコ"}, "icon": "https://leanny.github.io/splat3/images/coopEnemy/{}.png", "waves": {"1": [["lessers", 100, "A", 1], ["SakePillar", 100, "FsA0", 1], ["lessers", 82, "B", 1], ["Sakerocket", 82, "B0", 1], ["lessers", 64, "A", 1], ["SakelienTower", 64, "A0", 1], ["SakelienSnake", 55, "A0", 1], ["lessers", 46, "C", 1], ["SakePillar", 46, "FsC0", 1], ["SakelienSnake", 32, "C1", 1], ["lessers", 28, "B", 1], ["SakelienBomber", 28, "B0", 1], ["lessers", 10, "C", 1]], "2": [["rush", 100, "C", 1], ["rush", 85, "A", 1], ["rush", 71, "B", 1], ["rush", 56, "C", 1], ["rush", 42, "A", 1], ["rush", 28, "C", 1], ["rush", 13, "A", 1]], "3": [["lessers", 100, "C", 1], ["SakelienSnake", 100, "C1", 1], ["SakeSaucer", 88, "C4", 1], ["SakePillar", 88, "FsC0", 1], ["lessers", 88, "A", 1], ["SakelienTower", 88, "A0", 1], ["SakeDolphin", 77, "A1", 1], ["Sakerocket", 76, "A2", 1], ["lessers", 76, "C", 1], ["SakelienSnake", 76, "C4", 1], ["Sakediver", 73, "C1", 1], ["SakelienBomber", 68, "C3", 1], ["lessers", 64, "A", 1], ["SakelienBomber", 64, "A2", 1], ["SakePillar", 62, "FsA0", 1], ["SakelienTower", 57, "A0", 1], ["SakelienCupTwins", 54, "A", 1], ["lessers", 52, "C", 1], ["SakelienTower", 52, "C0", 1], ["SakelienCupTwins", 50, "C", 1], ["SakelienTower", 47, "C0", 1], ["Sakerocket", 43, "C0", 1], ["lessers", 40, "B", 1], ["SakeDolphin", 40, "B0", 1], ["Sakerocket", 36, "B4", 1], ["SakelienCupTwins", 35, "B", 1], ["SakelienCupTwins", 35, "B", 1], ["lessers", 28, "C", 1], ["SakelienTower", 28, "C0", 1], ["lessers", 16, "A", 1], ["lessers", 4, "C", 1]], "4": [["lessers", 100, "B", 1], ["Sakediver", 100, "B0", 1], ["SakelienBomber", 95, "A3", 1], ["SakeSaucer", 95, "B1", 1], ["lessers", 89, "C", 1], ["SakelienShield", 89, "B1", 1], ["SakelienGolden", 88, "A5", 5], ["SakeSaucer", 87, "B1", 1], ["lessers", 79, "B", 1], ["SakelienBomber", 79, "C4", 1], ["SakeSaucer", 78, "B2", 1], ["SakelienShield", 76, "C2", 1], ["SakelienGolden", 70, "A5", 1], ["lessers", 69, "A", 1], ["SakelienCupTwins", 69, "B", 1], ["SakelienTower", 61, "A0", 1], ["Sakerocket", 59, "B0", 1], ["SakeDolphin", 59, "B1", 1], ["lessers", 58, "B", 1], ["SakelienGolden", 58, "A5", 5], ["SakelienBomber", 54, "B0", 1], ["SakelienBomber", 51, "B0", 1], ["SakelienTower", 50, "B0", 1], ["lessers", 48, "C", 1], ["SakelienCupTwins", 48, "B", 1], ["SakelienGolden", 47, "A4", 5], ["SakeSaucer", 42, "B1", 1], ["SakelienTower", 40, "B0", 1], ["lessers", 38, "B", 1], ["SakeDolphin", 38, "B0", 1], ["SakelienSnake", 31, "C1", 1], ["SakelienGolden", 31, "B1", 10], ["SakelienSnake", 28, "C3", 1], ["lessers", 28, "C", 1], ["SakelienBomber", 28, "A5", 1], ["lessers", 17, "A", 1], ["lessers", 7, "B", 1]], "5": [["lessers", 100, "A", 1], ["SakelienShield", 100, "A2", 1], ["SakelienTower", 93, "A0", 1], ["Sakerocket", 91, "A6", 1], ["lessers", 91, "B", 1], ["Sakediver", 91, "B0", 1], ["Sakediver", 87, "B0", 1], ["SakelienTower", 87, "B0", 1], ["Sakerocket", 85, "B2", 1], ["lessers", 82, "A", 1], ["SakeDolphin", 82, "A1", 1], ["Sakerocket", 81, "A0", 1], ["SakeSaucer", 80, "A1", 1], ["Sakediver", 79, "A1", 1], ["lessers", 73, "B", 1], ["Sakediver", 73, "B1", 1], ["Sakerocket", 71, "B0", 1], ["Sakediver", 66, "B1", 1], ["SakeDolphin", 64, "B2", 1], ["lessers", 64, "A", 1], ["SakelienShield", 64, "A4", 1], ["Sakediver", 63, "A2", 1], ["SakelienBomber", 59, "A4", 1], ["SakeSaucer", 58, "A1", 1], ["lessers", 55, "C", 1], ["SakelienBomber", 55, "C2", 1], ["SakeSaucer", 48, "C2", 1], ["SakelienBomber", 48, "C1", 1], ["SakePillar", 46, "FsC0", 1], ["lessers", 46, "B", 1], ["SakelienSnake", 46, "B1", 1], ["SakelienShield", 45, "B1", 1], ["SakeDolphin", 43, "B0", 1], ["SakeSaucer", 38, "B2", 1], ["lessers", 37, "A", 1], ["SakePillar", 37, "FsA0", 1], ["SakelienShield", 30, "A3", 1], ["SakelienSnake", 29, "A4", 1], ["SakeDolphin", 28, "A6", 1], ["lessers", 28, "B", 1], ["SakelienCupTwins", 28, "B", 1], ["lessers", 19, "A", 1], ["lessers", 10, "B", 1], ["lessers", 1, "C", 1]]}};
+const BASE = {"names": {"SakelienBomber": "バクダン", "SakelienTower": "タワー", "SakelienSnake": "ヘビ", "SakePillar": "ハシラ", "Sakerocket": "コウモリ", "SakeSaucer": "ナベブタ", "SakeDolphin": "ダイバー", "Sakediver": "モグラ", "SakelienCupTwins": "カタパッド", "SakelienShield": "テッパン", "SakelienGolden": "キンシャケ", "lessers": "ザコ"}, "icon": "https://leanny.github.io/splat3/images/coopEnemy/{}.png", "waves": {"1": [["lessers", 100, "A", 1], ["SakePillar", 100, "FsA0", 1], ["lessers", 82, "B", 1], ["Sakerocket", 82, "B0", 1], ["lessers", 64, "A", 1], ["SakelienTower", 64, "A0", 1], ["SakelienSnake", 55, "A0", 1], ["lessers", 46, "C", 1], ["SakePillar", 46, "FsC0", 1], ["SakelienSnake", 32, "C1", 1], ["lessers", 28, "B", 1], ["SakelienBomber", 28, "B0", 1], ["lessers", 10, "C", 1]], "2": [["rush", 100, "C", 1], ["rush", 85, "A", 1], ["rush", 71, "B", 1], ["rush", 56, "C", 1], ["rush", 42, "A", 1], ["rush", 28, "C", 1], ["rush", 13, "A", 1]], "3": [["lessers", 100, "C", 1], ["SakelienSnake", 100, "C1", 1], ["SakeSaucer", 88, "C4", 1], ["SakePillar", 88, "FsC0", 1], ["lessers", 88, "A", 1], ["SakelienTower", 88, "A0", 1], ["SakeDolphin", 77, "A1", 1], ["Sakerocket", 76, "A2", 1], ["lessers", 76, "C", 1], ["SakelienSnake", 76, "C4", 1], ["Sakediver", 73, "C1", 1], ["SakelienBomber", 68, "C3", 1], ["lessers", 64, "A", 1], ["SakelienBomber", 64, "A2", 1], ["SakePillar", 62, "FsA0", 1], ["SakelienTower", 57, "A0", 1], ["SakelienCupTwins", 54, "A", 1], ["lessers", 52, "C", 1], ["SakelienTower", 52, "C0", 1], ["SakelienCupTwins", 50, "C", 1], ["SakelienTower", 47, "C0", 1], ["Sakerocket", 43, "C0", 1], ["lessers", 40, "B", 1], ["SakeDolphin", 40, "B0", 1], ["Sakerocket", 36, "B4", 1], ["SakelienCupTwins", 35, "B", 1], ["SakelienCupTwins", 35, "B", 1], ["lessers", 28, "C", 1], ["SakelienTower", 28, "C0", 1], ["lessers", 16, "A", 1], ["lessers", 4, "C", 1]], "4": [["lessers", 100, "B", 1], ["Sakediver", 100, "B0", 1], ["SakelienBomber", 95, "A3", 1], ["SakeSaucer", 95, "B1", 1], ["lessers", 89, "C", 1], ["SakelienShield", 89, "B1", 1], ["SakelienGolden", 88, "A5", 5], ["SakeSaucer", 87, "B1", 1], ["lessers", 79, "B", 1], ["SakelienBomber", 79, "C4", 1], ["SakeSaucer", 78, "B2", 1], ["SakelienShield", 76, "C2", 1], ["SakelienGolden", 70, "A5", 1], ["lessers", 69, "A", 1], ["SakelienCupTwins", 69, "B", 1], ["SakelienTower", 61, "A0", 1], ["Sakerocket", 59, "B0", 1], ["SakeDolphin", 59, "B1", 1], ["lessers", 58, "B", 1], ["SakelienGolden", 58, "A5", 5], ["SakelienBomber", 54, "B0", 1], ["SakelienBomber", 51, "B0", 1], ["SakelienTower", 50, "B0", 1], ["lessers", 48, "C", 1], ["SakelienCupTwins", 48, "B", 1], ["SakelienGolden", 47, "A4", 5], ["SakeSaucer", 42, "B1", 1], ["SakelienTower", 40, "B0", 1], ["lessers", 38, "B", 1], ["SakeDolphin", 38, "B0", 1], ["SakelienSnake", 31, "C1", 1], ["SakelienGolden", 31, "B1", 10], ["SakelienSnake", 28, "C3", 1], ["lessers", 28, "C", 1], ["SakelienBomber", 28, "A5", 1], ["lessers", 17, "A", 1], ["lessers", 7, "B", 1]], "5": [["lessers", 100, "A", 1], ["SakelienShield", 100, "A2", 1], ["SakelienTower", 93, "A0", 1], ["Sakerocket", 91, "A6", 1], ["lessers", 91, "B", 1], ["Sakediver", 91, "B0", 1], ["Sakediver", 87, "B0", 1], ["SakelienTower", 87, "B0", 1], ["Sakerocket", 85, "B2", 1], ["lessers", 82, "A", 1], ["SakeDolphin", 82, "A1", 1], ["Sakerocket", 81, "A0", 1], ["SakeSaucer", 80, "A1", 1], ["Sakediver", 79, "A1", 1], ["lessers", 73, "B", 1], ["Sakediver", 73, "B1", 1], ["Sakerocket", 71, "B0", 1], ["Sakediver", 66, "B1", 1], ["SakeDolphin", 64, "B2", 1], ["lessers", 64, "A", 1], ["SakelienShield", 64, "A4", 1], ["Sakediver", 63, "A2", 1], ["SakelienBomber", 59, "A4", 1], ["SakeSaucer", 58, "A1", 1], ["lessers", 55, "C", 1], ["SakelienBomber", 55, "C2", 1], ["SakeSaucer", 48, "C2", 1], ["SakelienBomber", 48, "C1", 1], ["SakePillar", 46, "FsC0", 1], ["lessers", 46, "B", 1], ["SakelienSnake", 46, "B1", 1], ["SakelienShield", 45, "B1", 1], ["SakeDolphin", 43, "B0", 1], ["SakeSaucer", 38, "B2", 1], ["lessers", 37, "A", 1], ["SakePillar", 37, "FsA0", 1], ["SakelienShield", 30, "A3", 1], ["SakelienSnake", 29, "A4", 1], ["SakeDolphin", 28, "A6", 1], ["lessers", 28, "B", 1], ["SakelienCupTwins", 28, "B", 1], ["lessers", 19, "A", 1], ["lessers", 10, "B", 1], ["lessers", 1, "C", 1]]}, "maps": {"1": {"img": "https://leanny.github.io/eggstra_work/parts/Shakeup/High/base.png", "points": {"basket": [50.21, 51.13], "FsA0": [60.57, 82.39], "FsB0": [55.3, 1.55], "FsC0": [18.34, 46.95], "A0": [59.51, 63.98], "A1": [75.47, 48.25], "A2": [69.46, 61.7], "B0": [73.45, 12.32], "B1": [54.18, 4.92], "C0": [26.25, 75.16], "C1": [18.66, 40.12]}}, "2": {"img": "https://leanny.github.io/eggstra_work/parts/Shakeup/Normal/base.png", "points": {"basket": [49.6, 62.03], "FsA0": [76.9, 93.64], "FsB0": [62.38, 5.25], "FsC0": [3.14, 76.99], "A0": [56.73, 94.81], "A1": [74.33, 96.58], "A2": [86.7, 85.94], "A3": [93.84, 77.65], "A4": [96.44, 71.15], "A5": [98.4, 56.96], "A6": [84.72, 42.78], "B0": [47.63, 0.78], "B1": [63.4, 11.54], "B2": [76.27, 16.04], "C0": [20.58, 82.39], "C1": [13.12, 82.39], "C2": [5.98, 68.2], "C3": [29.35, 36.86], "C4": [41.25, 75.06]}}, "3": {"img": "https://leanny.github.io/eggstra_work/parts/Shakeup/Low/base.png", "points": {"basket": [49.98, 47.15], "FsA0": [58.83, 92.94], "FsB0": [95.37, 65.03], "FsC0": [79.71, 15.58], "A0": [55.2, 95.06], "A1": [41.04, 96.06], "A2": [32.86, 88.24], "B0": [92.67, 69.29], "B1": [90.05, 51.7], "B2": [83.46, 74.69], "B3": [94.0, 59.82], "B4": [73.63, 77.42], "C0": [94.65, 40.86], "C1": [98.32, 29.27], "C2": [93.33, 19.21], "C3": [97.27, 34.77], "C4": [83.47, 15.6]}}, "4": {"img": "https://leanny.github.io/eggstra_work/parts/Shakeup/Normal/base.png", "points": {"basket": [49.6, 62.03], "FsA0": [76.9, 93.64], "FsB0": [62.38, 5.25], "FsC0": [3.14, 76.99], "A0": [56.73, 94.81], "A1": [74.33, 96.58], "A2": [86.7, 85.94], "A3": [93.84, 77.65], "A4": [96.44, 71.15], "A5": [98.4, 56.96], "A6": [84.72, 42.78], "B0": [47.63, 0.78], "B1": [63.4, 11.54], "B2": [76.27, 16.04], "C0": [20.58, 82.39], "C1": [13.12, 82.39], "C2": [5.98, 68.2], "C3": [29.35, 36.86], "C4": [41.25, 75.06]}}, "5": {"img": "https://leanny.github.io/eggstra_work/parts/Shakeup/Normal/base.png", "points": {"basket": [49.6, 62.03], "FsA0": [76.9, 93.64], "FsB0": [62.38, 5.25], "FsC0": [3.14, 76.99], "A0": [56.73, 94.81], "A1": [74.33, 96.58], "A2": [86.7, 85.94], "A3": [93.84, 77.65], "A4": [96.44, 71.15], "A5": [98.4, 56.96], "A6": [84.72, 42.78], "B0": [47.63, 0.78], "B1": [63.4, 11.54], "B2": [76.27, 16.04], "C0": [20.58, 82.39], "C1": [13.12, 82.39], "C2": [5.98, 68.2], "C3": [29.35, 36.86], "C4": [41.25, 75.06]}}}};
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const iconOf = (who, s = 26) => BASE.names[who] && who !== "lessers"
   ? `<img src="${BASE.icon.replace("{}", who)}" alt="" width="${s}" height="${s}" loading="lazy">` : "";
@@ -317,6 +361,8 @@ async function loadSpawns() {
   if (text === lastSpawns) return;
   lastSpawns = text;
   let data; try { data = JSON.parse(text); } catch (e) { return; }
+  SPAWN_DATA = data;
+  Object.values(players).forEach(updatePats);
   document.querySelectorAll(".added, .tag.newsp").forEach(e => e.remove());
   for (const [n, pats] of Object.entries(data.waves || {})) {
     const sec = document.getElementById("w" + n);
@@ -327,6 +373,133 @@ async function loadSpawns() {
       + pats.map(p => patternHtml(n, p)).join("") + `</div>`);
   }
 }
+
+// ---- 湧きアニメーション：残り時間に合わせて、オオモノが湧き場所に出てくる ----
+let SPAWN_DATA = { waves: {} };
+const players = {};
+const SHOW_SEC = 12, LESSER_SEC = 4;   // 地図に出しておく秒数
+// 同じ場所に何体もいるときの並べ方（%）
+const STACK = [[0, 0], [6, 0], [-6, 0], [0, 7], [6, 7], [-6, 7], [0, -7], [6, -7], [-6, -7]];
+function sideCenter(pts, L) {
+  const v = Object.entries(pts).filter(([k]) => k[0] === L);
+  if (!v.length) return null;
+  return [v.reduce((a, [, q]) => a + q[0], 0) / v.length, v.reduce((a, [, q]) => a + q[1], 0) / v.length];
+}
+function pointOf(m, place) {
+  if (m.points[place]) return m.points[place];
+  const s = /^(?:Fs)?([ABC])/.exec(place);
+  return s ? sideCenter(m.points, s[1]) : null;
+}
+function shortName(who) { return who === "rush" ? "ラッシュ" : who === "lessers" ? "ザコ" : (BASE.names[who] || who); }
+function makePlayer(n) {
+  const m = BASE.maps[n], sec = document.getElementById("w" + n);
+  if (!m || !sec) return;
+  const box = document.createElement("div");
+  box.className = "player";
+  box.innerHTML = `<div class="ph"><h3>湧きアニメーション</h3><div class="pbtns"></div></div>
+    <div class="stage"><img class="sb" src="${m.img}" alt="シェケナダムの地図" loading="lazy"><div class="dots"></div><div class="mobs"></div>
+      <div class="clock">残り<b>100</b></div></div>
+    <div class="tlbar"><div class="marks"></div><div class="needle"></div></div>
+    <div class="ctrl"><button class="play" type="button">▶ 再生</button>
+      <input class="seek" type="range" min="0" max="100" step="0.1" value="0" aria-label="残り時間">
+      <span class="spd">${[1, 2, 4].map(s => `<button type="button" data-s="${s}"${s === 2 ? ' class="on"' : ""}>×${s}</button>`).join("")}</span></div>
+    <ol class="log"></ol>`;
+  sec.querySelector(".map").before(box);
+  box.querySelector(".dots").innerHTML = Object.entries(m.points).map(([k, [x, y]]) => k === "basket"
+    ? `<span class="basket" style="left:${x}%;top:${y}%">カゴ</span>`
+    : `<span class="dot${k.startsWith("Fs") ? " fs" : ""}" style="left:${x}%;top:${y}%"><i>${k}</i></span>`).join("");
+  const st = { n, m, box, t: 0, playing: false, speed: 2, pat: "base", rows: [], els: [], shown: -1, raf: 0, prev: 0 };
+  players[n] = st;
+  box.querySelector(".play").onclick = () => toggle(st);
+  box.querySelector(".seek").oninput = e => { st.t = +e.target.value; draw(st); };
+  box.querySelectorAll(".spd button").forEach(b => b.onclick = () => {
+    st.speed = +b.dataset.s; box.querySelectorAll(".spd button").forEach(x => x.classList.toggle("on", x === b));
+  });
+  updatePats(st);
+}
+function updatePats(st) {
+  const pats = (SPAWN_DATA.waves || {})[st.n] || [];
+  if (st.pat !== "base" && !pats.some(p => p.id === st.pat)) st.pat = "base";
+  const btns = st.box.querySelector(".pbtns");
+  btns.innerHTML = pats.length ? [`<button type="button" data-p="base">元の湧き</button>`]
+    .concat(pats.map(p => `<button type="button" data-p="${esc(p.id)}">${esc(p.name)}</button>`)).join("") : "";
+  btns.querySelectorAll("button").forEach(b => {
+    b.classList.toggle("on", b.dataset.p === st.pat);
+    b.onclick = () => { st.pat = b.dataset.p; updatePats(st); };
+  });
+  build(st);
+}
+function build(st) {
+  const base = BASE.waves[st.n] || [];
+  const pat = st.pat === "base" ? null : ((SPAWN_DATA.waves || {})[st.n] || []).find(p => p.id === st.pat);
+  const rows = (pat ? pat.rows : base).map((r, i) => {
+    const b = base[i], who = r[0], lesser = who === "lessers";
+    const wc = !!pat && b && who !== b[0], pc = !!pat && b && r[2] !== b[2];
+    return { i, who, sec: r[1], place: r[2], cnt: r[3], memo: r[4] || "", from: wc ? b[0] : null, moved: pc ? b[2] : null,
+      at: 100 - r[1], dur: lesser ? LESSER_SEC : SHOW_SEC, lesser, pos: pointOf(st.m, r[2]) };
+  });
+  // 同じ場所に続けて湧いたら少しずらして重ならないようにする
+  rows.forEach((r, k) => {
+    const near = rows.slice(0, k).filter(o => o.place === r.place && o.at + o.dur > r.at);
+    r.stack = near.length;
+  });
+  st.rows = rows;
+  const mobs = st.box.querySelector(".mobs");
+  mobs.innerHTML = rows.map(r => {
+    if (!r.pos) return "<div></div>";
+    // 地図の端で切れないように、少し内側に寄せる
+    const [ox, oy] = STACK[r.stack % STACK.length];
+    const x = Math.min(95, Math.max(5, r.pos[0] + ox)), y = Math.min(95, Math.max(5, r.pos[1] + oy));
+    const cls = ["mob", r.lesser ? "lesser" : "", r.who === "SakelienGolden" ? "gold" : "", r.who === "rush" ? "rush" : "",
+      r.from || r.moved ? "ch" : ""].join(" ");
+    const icon = r.lesser || r.who === "rush" ? "" : `<img src="${BASE.icon.replace("{}", r.who)}" alt="">`;
+    return `<div class="${cls}" style="left:${x}%;top:${y}%">${icon}<span>${esc(shortName(r.who))}</span></div>`;
+  }).join("");
+  st.els = [...mobs.children];
+  st.box.querySelector(".marks").innerHTML = rows.filter(r => !r.lesser).map(r =>
+    `<button type="button" class="mk${r.who === "SakelienGolden" ? " gold" : ""}${r.from || r.moved ? " ch" : ""}" style="left:${r.at}%"`
+    + ` data-t="${r.at}" title="${r.sec}s ${esc(shortName(r.who))} ${esc(r.place)}"></button>`).join("");
+  st.box.querySelectorAll(".mk").forEach(b => b.onclick = () => { st.t = +b.dataset.t; draw(st); });
+  st.shown = -1;
+  draw(st);
+}
+function draw(st) {
+  const t = st.t;
+  st.box.querySelector(".clock b").textContent = Math.max(0, Math.ceil(100 - t - 1e-9));
+  st.box.querySelector(".seek").value = t;
+  st.box.querySelector(".needle").style.left = t + "%";
+  let shown = 0;
+  st.rows.forEach((r, k) => {
+    const on = t >= r.at && t < r.at + r.dur;
+    st.els[k].classList.toggle("on", on);
+    st.els[k].classList.toggle("fresh", on && t < r.at + 1.2);
+    if (t >= r.at) shown++;
+  });
+  if (shown !== st.shown) {   // 出てきた順のリスト（新しいものが上）
+    st.shown = shown;
+    const done = st.rows.filter(r => t >= r.at && !r.lesser).slice(-6).reverse();
+    st.box.querySelector(".log").innerHTML = done.map(r => `<li class="${r.from || r.moved ? "ch" : ""}${r.who === "SakelienGolden" ? " gold" : ""}">`
+      + `<b>${r.sec}s</b> ${r.from ? `<s>${esc(shortName(r.from))}</s> → ` : ""}${esc(shortName(r.who))}`
+      + `${r.who === "SakelienGolden" ? `（金イクラ ${r.cnt}個）` : ""} <span class="pl">${placeText(r.place)}`
+      + `${r.moved ? `（元は ${placeText(r.moved)}）` : ""}</span>${r.memo ? `<span class="lm">${esc(r.memo)}</span>` : ""}</li>`).join("");
+  }
+}
+function toggle(st) {
+  st.playing = !st.playing;
+  if (st.playing && st.t >= 100) st.t = 0;
+  st.box.querySelector(".play").textContent = st.playing ? "❚❚ 止める" : "▶ 再生";
+  // 時計は実際に過ぎた時間で進める（タブが裏にあって描画が間引かれても、時間はずれない）
+  if (st.playing) { st.prev = performance.now(); st.raf = setInterval(() => tick(st), 50); }
+  else clearInterval(st.raf);
+}
+function tick(st) {
+  const now = performance.now();
+  st.t = Math.min(100, st.t + (now - st.prev) / 1000 * st.speed);
+  st.prev = now;
+  draw(st);
+  if (st.t >= 100) toggle(st);
+}
+Object.keys(BASE.maps).forEach(makePlayer);
 loadSpawns();
 setInterval(loadSpawns, 60000);
 </script>
