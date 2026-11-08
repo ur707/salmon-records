@@ -86,7 +86,7 @@
 <div class="wrap">
   <a class="back" href="./">← バイト記録にもどる</a>
   <h1><span class="mark"></span>バイトチームコンテスト 危険度MAXまとめ</h1>
-  <p class="lead">Eggstra Work 03 を、各WAVEの危険度がいちばん高いときの内容でまとめました。当日に湧き方がちがったときは、各WAVEの下に「当日に見つかった湧き」として追加します（元の湧きはそのまま残します）。</p>
+  <p class="lead">Eggstra Work 03 を、各WAVEの危険度がいちばん高いときの内容でまとめました。当日に湧く場所がちがったときは、各WAVEの下に「当日に見つかった湧き」として追加します（元の湧きはそのまま残します）。</p>
 
   <section class="panel kit">
     <div><h3>ステージ</h3><div class="stage">シェケナダム</div></div>
@@ -230,22 +230,17 @@ const placeText = p => {
   if (!m) return esc(p);
   return (m[1] ? "ハシラ " : "") + m[2] + "側" + (m[3] ? " #" + m[3] : "");
 };
-// 当日の湧きは元の湧きと同じ並び・同じオオモノで、残り時間と場所だけがちがう（オオモノの数は変わらない）
+// 当日の湧きは元の湧きと同じ並び・同じオオモノ・同じ時間で、場所だけがちがう
 const nameOf = (who, c) => who === "rush" ? "ラッシュの出現"
   : who === "SakelienGolden" ? `${BASE.names[who]}（金イクラ ${c}個）` : (BASE.names[who] || who) + (c > 1 ? ` ×${c}` : "");
 function patternHtml(n, p) {
   const base = BASE.waves[n] || [];
-  const isChanged = (r, i) => base[i] && (r[1] !== base[i][1] || r[2] !== base[i][2]);
+  const isChanged = (r, i) => base[i] && r[2] !== base[i][2];
   const cls = who => who === "lessers" ? "lesser" : who === "SakelienGolden" ? "gold" : "";
-  const was = (r, i) => {
-    const b = base[i], parts = [];
-    if (r[1] !== b[1]) parts.push(`${b[1]}s`);
-    if (r[2] !== b[2]) parts.push(placeText(b[2]));
-    return parts.join("・");
-  };
+  const was = (r, i) => placeText(base[i][2]);
   const changedIdx = p.rows.map((r, i) => i).filter(i => isChanged(p.rows[i], i));
   const changed = changedIdx.length
-    ? `<table class="tl"><thead><tr><th>残り時間</th><th>出てくるもの</th><th>場所</th><th>元の湧き</th></tr></thead><tbody>`
+    ? `<table class="tl"><thead><tr><th>残り時間</th><th>出てくるもの</th><th>当日の場所</th><th>元の場所</th></tr></thead><tbody>`
       + changedIdx.map(i => { const [who, sec, place, c] = p.rows[i];
         return `<tr class="${cls(who)} new"><td class="t">${sec}s</td><td>${iconOf(who)}${esc(nameOf(who, c))}</td>`
           + `<td><b>${placeText(place)}</b></td><td class="was">${was(p.rows[i], i)}</td></tr>`; }).join("")
@@ -275,7 +270,7 @@ async function loadSpawns() {
     if (!sec || !pats.length) continue;
     sec.querySelector(".whead .hzbig").insertAdjacentHTML("beforebegin", `<span class="tag newsp">当日の湧き ${pats.length}件</span>`);
     sec.insertAdjacentHTML("beforeend", `<div class="added"><h3>当日に見つかった湧き</h3>`
-      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数は同じで、出てくる時間や場所が変わったところだけを載せています。</p>`
+      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数も出てくる時間も同じで、場所が変わったところだけを載せています。</p>`
       + pats.map(p => patternHtml(n, p)).join("") + `</div>`);
   }
 }
