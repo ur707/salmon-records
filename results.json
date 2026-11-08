@@ -52,5 +52,6 @@
  {"time": "2026-11-08T16:41:41", "shift": "2026-11-08 09:00", "waves": [[70, 18], [0, 19]], "total": 70, "new": [], "clear": false, "red": 3408, "ex": null},
  {"time": "2026-11-08T16:44:32", "shift": "2026-11-08 09:00", "waves": [[75, null], [0, 19]], "total": 75, "new": [], "clear": false, "red": 3560, "ex": null, "img": "20261108_164432.png"},
  {"time": "2026-11-08T16:47:19", "shift": "2026-11-08 09:00", "waves": [[72, 18], [0, 19]], "total": 72, "new": [], "clear": false, "red": 3640, "ex": null},
- {"time": "2026-11-08T16:58:50", "shift": "2026-11-08 09:00", "waves": [[65, null], [0, 19]], "total": 65, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_165850.png"}
+ {"time": "2026-11-08T16:58:50", "shift": "2026-11-08 09:00", "waves": [[65, null], [0, 19]], "total": 65, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_165850.png"},
+ {"time": "2026-11-08T17:01:41", "shift": "2026-11-08 09:00", "waves": [[72, null], [0, 19]], "total": 72, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_170141.png"}
 ]
