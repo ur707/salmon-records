@@ -270,8 +270,7 @@
       "SakelienGolden",
       88,
       "A5",
-      5,
-      "5個"
+      5
      ],
      [
       "SakeSaucer",
@@ -290,7 +289,7 @@
       79,
       "C4",
       1,
-      "放置"
+      "47sまで放置で金シャケの位置変わる"
      ],
      [
       "SakeSaucer",
@@ -308,8 +307,7 @@
       "SakelienGolden",
       70,
       "A5",
-      1,
-      "1個"
+      1
      ],
      [
       "lessers",
@@ -351,8 +349,7 @@
       "SakelienGolden",
       58,
       "A5",
-      5,
-      "5個"
+      5
      ],
      [
       "SakelienBomber",
@@ -370,8 +367,7 @@
       "SakelienTower",
       50,
       "B0",
-      1,
-      "桟橋左、タマ利用"
+      1
      ],
      [
       "lessers",
@@ -382,9 +378,8 @@
      [
       "SakelienShield",
       48,
-      "B",
-      1,
-      "多分テッパンに置換"
+      "B1",
+      1
      ],
      [
       "SakelienGolden",
@@ -481,7 +476,7 @@
       "網"
      ]
     ],
-    "updated": "11/08 21:57"
+    "updated": "11/08 22:00"
    }
   ]
  }
