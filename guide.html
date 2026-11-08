@@ -65,6 +65,18 @@
   .tl td.t { font-weight:700; width:80px; }
   .tl tr.lesser td { color:var(--muted); }
   .tl tr.gold td { color:var(--gold); font-weight:700; }
+  .added { margin-top:16px; padding-top:12px; border-top:2px dashed var(--accent); }
+  .added h3 { font-size:15px; margin:0 0 2px; }
+  .pat { border:1px solid var(--line); border-radius:10px; padding:8px 12px; margin-top:10px; }
+  .pat summary { font-size:14px; color:var(--ink); }
+  .pat .chips { margin-top:8px; }
+  .pnote { font-size:13px; margin:6px 0 0; white-space:pre-wrap; }
+  .diff { font-size:11px; font-weight:800; margin-left:4px; }
+  .diff.up { color:#d9534f; } .diff.down { color:#3a8a00; }
+  .chip.gone { opacity:.55; }
+  .newtag { display:inline-block; font-size:10px; font-weight:800; background:#d9534f; color:#fff; border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:middle; }
+  .tl tr.new td { background:rgba(217,83,79,.08); }
+  .tag.newsp { border-color:#d9534f; color:#d9534f; }
   footer { color:var(--muted); font-size:12px; margin-top:28px; }
   @media (max-width:560px) { .panel { padding:12px; } th, td { padding:7px 6px; } .hzbig { margin-left:0; } }
 </style>
@@ -73,7 +85,7 @@
 <div class="wrap">
   <a class="back" href="./">← バイト記録にもどる</a>
   <h1><span class="mark"></span>バイトチームコンテスト 危険度MAXまとめ</h1>
-  <p class="lead">Eggstra Work 03 を、各WAVEの危険度がいちばん高いときの内容でまとめました。</p>
+  <p class="lead">Eggstra Work 03 を、各WAVEの危険度がいちばん高いときの内容でまとめました。当日に湧き方がちがったときは、各WAVEの下に「当日に見つかった湧き」として追加します（元の湧きはそのまま残します）。</p>
 
   <section class="panel kit">
     <div><h3>ステージ</h3><div class="stage">シェケナダム</div></div>
@@ -207,6 +219,76 @@
     場所の「A側・B側・C側」とその番号は、出典ページの地図の表記です。「HZL+30% / +60%」も出典ページの表記どおりのノルマです。
   </footer>
 </div>
+<script>
+const BASE = {"names": {"SakelienBomber": "バクダン", "SakelienTower": "タワー", "SakelienSnake": "ヘビ", "SakePillar": "ハシラ", "Sakerocket": "コウモリ", "SakeSaucer": "ナベブタ", "SakeDolphin": "ダイバー", "Sakediver": "モグラ", "SakelienCupTwins": "カタパッド", "SakelienShield": "テッパン", "SakelienGolden": "キンシャケ", "lessers": "ザコ"}, "icon": "https://leanny.github.io/splat3/images/coopEnemy/{}.png", "waves": {"1": [["lessers", 100, "A", 1], ["SakePillar", 100, "FsA0", 1], ["lessers", 82, "B", 1], ["Sakerocket", 82, "B0", 1], ["lessers", 64, "A", 1], ["SakelienTower", 64, "A0", 1], ["SakelienSnake", 55, "A0", 1], ["lessers", 46, "C", 1], ["SakePillar", 46, "FsC0", 1], ["SakelienSnake", 32, "C1", 1], ["lessers", 28, "B", 1], ["SakelienBomber", 28, "B0", 1], ["lessers", 10, "C", 1]], "2": [["rush", 100, "C", 1], ["rush", 85, "A", 1], ["rush", 71, "B", 1], ["rush", 56, "C", 1], ["rush", 42, "A", 1], ["rush", 28, "C", 1], ["rush", 13, "A", 1]], "3": [["lessers", 100, "C", 1], ["SakelienSnake", 100, "C1", 1], ["SakeSaucer", 88, "C4", 1], ["SakePillar", 88, "FsC0", 1], ["lessers", 88, "A", 1], ["SakelienTower", 88, "A0", 1], ["SakeDolphin", 77, "A1", 1], ["Sakerocket", 76, "A2", 1], ["lessers", 76, "C", 1], ["SakelienSnake", 76, "C4", 1], ["Sakediver", 73, "C1", 1], ["SakelienBomber", 68, "C3", 1], ["lessers", 64, "A", 1], ["SakelienBomber", 64, "A2", 1], ["SakePillar", 62, "FsA0", 1], ["SakelienTower", 57, "A0", 1], ["SakelienCupTwins", 54, "A", 1], ["lessers", 52, "C", 1], ["SakelienTower", 52, "C0", 1], ["SakelienCupTwins", 50, "C", 1], ["SakelienTower", 47, "C0", 1], ["Sakerocket", 43, "C0", 1], ["lessers", 40, "B", 1], ["SakeDolphin", 40, "B0", 1], ["Sakerocket", 36, "B4", 1], ["SakelienCupTwins", 35, "B", 1], ["SakelienCupTwins", 35, "B", 1], ["lessers", 28, "C", 1], ["SakelienTower", 28, "C0", 1], ["lessers", 16, "A", 1], ["lessers", 4, "C", 1]], "4": [["lessers", 100, "B", 1], ["Sakediver", 100, "B0", 1], ["SakelienBomber", 95, "A3", 1], ["SakeSaucer", 95, "B1", 1], ["lessers", 89, "C", 1], ["SakelienShield", 89, "B1", 1], ["SakelienGolden", 88, "A5", 5], ["SakeSaucer", 87, "B1", 1], ["lessers", 79, "B", 1], ["SakelienBomber", 79, "C4", 1], ["SakeSaucer", 78, "B2", 1], ["SakelienShield", 76, "C2", 1], ["SakelienGolden", 70, "A5", 1], ["lessers", 69, "A", 1], ["SakelienCupTwins", 69, "B", 1], ["SakelienTower", 61, "A0", 1], ["Sakerocket", 59, "B0", 1], ["SakeDolphin", 59, "B1", 1], ["lessers", 58, "B", 1], ["SakelienGolden", 58, "A5", 5], ["SakelienBomber", 54, "B0", 1], ["SakelienBomber", 51, "B0", 1], ["SakelienTower", 50, "B0", 1], ["lessers", 48, "C", 1], ["SakelienCupTwins", 48, "B", 1], ["SakelienGolden", 47, "A4", 5], ["SakeSaucer", 42, "B1", 1], ["SakelienTower", 40, "B0", 1], ["lessers", 38, "B", 1], ["SakeDolphin", 38, "B0", 1], ["SakelienSnake", 31, "C1", 1], ["SakelienGolden", 31, "B1", 10], ["SakelienSnake", 28, "C3", 1], ["lessers", 28, "C", 1], ["SakelienBomber", 28, "A5", 1], ["lessers", 17, "A", 1], ["lessers", 7, "B", 1]], "5": [["lessers", 100, "A", 1], ["SakelienShield", 100, "A2", 1], ["SakelienTower", 93, "A0", 1], ["Sakerocket", 91, "A6", 1], ["lessers", 91, "B", 1], ["Sakediver", 91, "B0", 1], ["Sakediver", 87, "B0", 1], ["SakelienTower", 87, "B0", 1], ["Sakerocket", 85, "B2", 1], ["lessers", 82, "A", 1], ["SakeDolphin", 82, "A1", 1], ["Sakerocket", 81, "A0", 1], ["SakeSaucer", 80, "A1", 1], ["Sakediver", 79, "A1", 1], ["lessers", 73, "B", 1], ["Sakediver", 73, "B1", 1], ["Sakerocket", 71, "B0", 1], ["Sakediver", 66, "B1", 1], ["SakeDolphin", 64, "B2", 1], ["lessers", 64, "A", 1], ["SakelienShield", 64, "A4", 1], ["Sakediver", 63, "A2", 1], ["SakelienBomber", 59, "A4", 1], ["SakeSaucer", 58, "A1", 1], ["lessers", 55, "C", 1], ["SakelienBomber", 55, "C2", 1], ["SakeSaucer", 48, "C2", 1], ["SakelienBomber", 48, "C1", 1], ["SakePillar", 46, "FsC0", 1], ["lessers", 46, "B", 1], ["SakelienSnake", 46, "B1", 1], ["SakelienShield", 45, "B1", 1], ["SakeDolphin", 43, "B0", 1], ["SakeSaucer", 38, "B2", 1], ["lessers", 37, "A", 1], ["SakePillar", 37, "FsA0", 1], ["SakelienShield", 30, "A3", 1], ["SakelienSnake", 29, "A4", 1], ["SakeDolphin", 28, "A6", 1], ["lessers", 28, "B", 1], ["SakelienCupTwins", 28, "B", 1], ["lessers", 19, "A", 1], ["lessers", 10, "B", 1], ["lessers", 1, "C", 1]]}};
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iconOf = (who, s = 26) => BASE.names[who] && who !== "lessers"
+  ? `<img src="${BASE.icon.replace("{}", who)}" alt="" width="${s}" height="${s}" loading="lazy">` : "";
+const placeText = p => {
+  const m = /^(Fs)?([ABC])(\d*)$/.exec(p);
+  if (!m) return esc(p);
+  return (m[1] ? "ハシラ " : "") + m[2] + "側" + (m[3] ? " #" + m[3] : "");
+};
+const keyOf = r => r.join("|");
+function bossCount(rows) {
+  const c = {};
+  for (const [who, , , n] of rows) if (!["lessers", "rush", "SakelienGolden"].includes(who)) c[who] = (c[who] || 0) + n;
+  return c;
+}
+function patternHtml(n, p) {
+  const base = BASE.waves[n] || [];
+  const baseKeys = new Set(base.map(keyOf)), myKeys = new Set(p.rows.map(keyOf));
+  const cnt = bossCount(p.rows), bcnt = bossCount(base);
+  const diff = d => d ? `<span class="diff ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</span>` : "";
+  const chips = Object.entries(cnt).sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `<span class="chip">${iconOf(k, 22)}${esc(BASE.names[k])}<b>×${v}</b>${diff(v - (bcnt[k] || 0))}</span>`).join("")
+    + Object.keys(bcnt).filter(k => !cnt[k])
+    .map(k => `<span class="chip gone">${iconOf(k, 22)}${esc(BASE.names[k])}<b>×0</b>${diff(-bcnt[k])}</span>`).join("");
+  const total = Object.values(cnt).reduce((a, b) => a + b, 0), btotal = Object.values(bcnt).reduce((a, b) => a + b, 0);
+  const newCount = p.rows.filter(r => !baseKeys.has(keyOf(r))).length;
+  const gone = base.filter(r => !myKeys.has(keyOf(r)) && r[0] !== "lessers");
+  const tr = r => {
+    const [who, sec, place, c] = r, isNew = !baseKeys.has(keyOf(r));
+    let name, cls = "";
+    if (who === "rush") name = "ラッシュの出現";
+    else if (who === "SakelienGolden") { name = `${BASE.names[who]}（金イクラ ${c}個）`; cls = "gold"; }
+    else { name = (BASE.names[who] || who) + (c > 1 ? ` ×${c}` : ""); if (who === "lessers") cls = "lesser"; }
+    return `<tr class="${cls}${isNew ? " new" : ""}"><td class="t">${sec}s</td><td>${iconOf(who)}${esc(name)}`
+      + `${isNew ? '<span class="newtag">新</span>' : ""}</td><td>${placeText(place)}</td></tr>`;
+  };
+  const head = `<thead><tr><th>残り時間</th><th>出てくるもの</th><th>場所</th></tr></thead>`;
+  const newRows = p.rows.filter(r => !baseKeys.has(keyOf(r)));
+  const changed = newRows.length ? `<table class="tl">${head}<tbody>${newRows.map(tr).join("")}</tbody></table>` : "";
+  const full = `<details><summary>このパターンの出現タイミングをすべて見る（${p.rows.length}件）</summary>`
+    + `<table class="tl">${head}<tbody>${p.rows.map(tr).join("")}</tbody></table></details>`;
+  const goneHtml = gone.length ? `<p class="note">元の湧きにあって、このパターンでは出なかったオオモノ：`
+    + gone.map(([who, sec, place]) => `${esc(BASE.names[who] || who)}（${sec}s・${placeText(place)}）`).join("、") + "</p>" : "";
+  return `<details class="pat" open><summary>${esc(p.name)}<span class="q">　オオモノ ${total}体${diff(total - btotal)}`
+    + `　新しい湧き ${newCount}件${p.updated ? "　" + esc(p.updated) + " 追加" : ""}</span></summary>`
+    + (p.note ? `<p class="pnote">${esc(p.note)}</p>` : "")
+    + `<div class="chips">${chips}</div>${goneHtml}`
+    + changed + full + `</details>`;
+}
+let lastSpawns = "";
+async function loadSpawns() {
+  let text;
+  try { const r = await fetch("spawns.json", { cache: "no-store" }); if (!r.ok) return; text = await r.text(); } catch (e) { return; }
+  if (text === lastSpawns) return;
+  lastSpawns = text;
+  let data; try { data = JSON.parse(text); } catch (e) { return; }
+  document.querySelectorAll(".added, .tag.newsp").forEach(e => e.remove());
+  for (const [n, pats] of Object.entries(data.waves || {})) {
+    const sec = document.getElementById("w" + n);
+    if (!sec || !pats.length) continue;
+    sec.querySelector(".whead .hzbig").insertAdjacentHTML("beforebegin", `<span class="tag newsp">当日の湧き ${pats.length}件</span>`);
+    sec.insertAdjacentHTML("beforeend", `<div class="added"><h3>当日に見つかった湧き</h3>`
+      + `<p class="note">元の湧きはそのまま上に残しています。<span class="newtag">新</span> は元の湧きにない出方です。</p>`
+      + pats.map(p => patternHtml(n, p)).join("") + `</div>`);
+  }
+}
+loadSpawns();
+setInterval(loadSpawns, 60000);
+</script>
 <script>
 // 地図をタップすると原寸で表示（スクロールして見られる）。もう一度タップで閉じる
 document.querySelectorAll(".map").forEach(m => m.addEventListener("click", () => {
