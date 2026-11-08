@@ -59,5 +59,6 @@
  {"time": "2026-11-08T17:38:14", "shift": "2026-11-08 09:00", "waves": [[76, 18], [0, 19]], "total": 76, "new": ["合計", "WAVE1"], "clear": false, "red": 3540, "ex": null},
  {"time": "2026-11-08T17:43:48", "shift": "2026-11-08 09:00", "waves": [[69, 18], [0, 19]], "total": 69, "new": [], "clear": false, "red": 3486, "ex": null},
  {"time": "2026-11-08T17:46:35", "shift": "2026-11-08 09:00", "waves": [[74, null], [0, 19]], "total": 74, "new": [], "clear": false, "red": 3562, "ex": null, "img": "20261108_174634.png"},
- {"time": "2026-11-08T17:49:28", "shift": "2026-11-08 09:00", "waves": [[73, 18], [0, 19]], "total": 73, "new": [], "clear": false, "red": 3515, "ex": null}
+ {"time": "2026-11-08T17:49:28", "shift": "2026-11-08 09:00", "waves": [[73, 18], [0, 19]], "total": 73, "new": [], "clear": false, "red": 3515, "ex": null},
+ {"time": "2026-11-08T17:52:12", "shift": "2026-11-08 09:00", "waves": [[71, 18], [0, 19]], "total": 71, "new": [], "clear": false, "red": 3616, "ex": null}
 ]
