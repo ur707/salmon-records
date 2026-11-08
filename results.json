@@ -34,5 +34,6 @@
  {"time": "2026-11-08T15:37:44", "shift": "2026-11-08 09:00", "waves": [[64, 18], [0, 19]], "total": 64, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_153744.png"},
  {"time": "2026-11-08T15:43:26", "shift": "2026-11-08 09:00", "waves": [[61, null], [0, 19]], "total": 61, "new": [], "clear": false, "red": 3426, "ex": null, "img": "20261108_154326.png"},
  {"time": "2026-11-08T15:46:11", "shift": "2026-11-08 09:00", "waves": [[75, null], [0, 19]], "total": 75, "new": ["合計", "WAVE1"], "clear": false, "red": null, "ex": null, "img": "20261108_154611.png"},
- {"time": "2026-11-08T15:48:58", "shift": "2026-11-08 09:00", "waves": [[69, 18], [0, 19]], "total": 69, "new": [], "clear": false, "red": 3513, "ex": null}
+ {"time": "2026-11-08T15:48:58", "shift": "2026-11-08 09:00", "waves": [[69, 18], [0, 19]], "total": 69, "new": [], "clear": false, "red": 3513, "ex": null},
+ {"time": "2026-11-08T15:51:43", "shift": "2026-11-08 09:00", "waves": [[75, null], [0, 19]], "total": 75, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_155142.png"}
 ]
