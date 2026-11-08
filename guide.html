@@ -78,6 +78,26 @@
   .tl tr.new td { background:rgba(217,83,79,.08); }
   .tl td.was { color:var(--muted); font-size:13px; }
   .tl td.was img { margin-right:4px; }
+  .sheet { width:100%; font-size:14px; }
+  .sheet th { text-align:center; }
+  .sheet td { padding:5px 8px; vertical-align:middle; white-space:normal; }
+  .sheet tr.gstart td { border-top:3px double var(--line); }
+  .sheet td.no { color:var(--muted); font-size:12px; text-align:right; width:28px; padding-right:4px; }
+  .sheet td.side { text-align:center; width:64px; border-left:1px solid var(--line); border-right:1px solid var(--line); background:var(--bg); }
+  .sheet td.side b { display:block; font-size:15px; }
+  .sheet td.side span { display:block; font-size:11px; color:var(--muted); }
+  .sheet td.boss .bx { display:flex; align-items:center; gap:6px; }
+  .sheet td.boss span { line-height:1.35; }
+  .sheet td.boss i { font-style:normal; color:var(--muted); font-size:11px; }
+  .sheet td.boss em { display:block; font-style:normal; color:#d9534f; font-size:11px; font-weight:700; }
+  .sheet td.boss s { color:var(--muted); }
+  .sheet td.sec { text-align:center; font-weight:800; width:48px; }
+  .sheet td.memo { font-size:13px; min-width:8em; }
+  .sheet tr.ch td:not(.side) { background:rgba(217,83,79,.10); }
+  .sheet tr.gold td.boss { color:var(--gold); font-weight:700; }
+  .sheet tr.lesser td { color:var(--muted); }
+  @media (max-width:560px) { .sheet { font-size:13px; } .sheet td { padding:4px 4px; } .sheet td.boss img { display:none; }
+    .sheet td.side { width:44px; } .sheet td.side b { font-size:13px; } .sheet td.sec { width:34px; } .sheet td.memo { min-width:6em; font-size:12px; } }
   .lanes { table-layout:fixed; min-width:520px; }
   .lanes th { text-align:center; font-size:13px; color:var(--ink); }
   .lanes th:first-child, .lanes td.t { width:52px; }
@@ -259,36 +279,41 @@ function patternHtml(n, p) {
   const placeChanged = (r, i) => base[i] && r[2] !== base[i][2];
   const isChanged = (r, i) => whoChanged(r, i) || placeChanged(r, i);
   const cls = who => who === "lessers" ? "lesser" : who === "SakelienGolden" ? "gold" : "";
-  // 場所ごとに3列：縦が残り時間、横が A・B・C側（p.lanes でチームの呼び方と並び順を決められる）
-  const lanes = (p.lanes || [["A", ""], ["B", ""], ["C", ""]]).slice();
+  // チームの表と同じ形：時間の順に並べ、同じ側が続くところを1つのまとまりにする（位置・オオモノ・秒数・メモ）
+  const sideName = {};
+  for (const [L, nm] of (p.lanes || [])) sideName[L] = nm;
   const sideOf = pl => { const m = /^(?:Fs)?([ABC])/.exec(pl); return m ? m[1] : "?"; };
-  if (p.rows.some(r => sideOf(r[2]) === "?")) lanes.push(["?", "その他"]);
-  const posText = pl => {
-    const m = /^(Fs)?([ABC])(\d*)$/.exec(pl);
-    if (!m) return esc(pl);
-    return m[3] ? "#" + m[3] : "";
-  };
-  const item = i => {
-    const r = p.rows[i], b = base[i], wc = whoChanged(r, i), pc = placeChanged(r, i);
-    if (r[0] === "lessers") return `<div class="li lesser">ザコ${r[4] ? `<div class="lm">${esc(r[4])}</div>` : ""}</div>`;
-    const name = wc ? `<s>${esc(nameOf(b[0], b[3]))}</s> → <b>${esc(nameOf(r[0], r[3]))}</b>` : esc(nameOf(r[0], r[3]));
-    return `<div class="li ${cls(r[0])}${wc || pc ? " ch" : ""}">${iconOf(r[0], 22)}<div>${name} <span class="pos">${posText(r[2])}</span>`
-      + (pc ? `<div class="from">元は ${placeText(b[2])}</div>` : "")
-      + (r[4] ? `<div class="lm">${esc(r[4])}</div>` : "") + `</div></div>`;
-  };
+  const sideLabel = pl => { const L = sideOf(pl); return L === "?" ? esc(pl) : (sideName[L] ? esc(sideName[L]) : L + "側"); };
+  const spot = pl => { const m = /^(Fs)?([ABC])(\d*)$/.exec(pl); return m ? (m[3] ? "#" + m[3] : "") : ""; };
+  const order = p.rows.map((r, i) => i).sort((a, b) => p.rows[b][1] - p.rows[a][1] || a - b);
+  const bossIdx = order.filter(i => p.rows[i][0] !== "lessers");
+  const lastBoss = Math.min(...bossIdx.map(i => p.rows[i][1]));
+  // ザコは、最後のオオモノより後のもの（チームの表の最後の「雑魚」）だけ載せる
+  const shown = order.filter(i => p.rows[i][0] !== "lessers" || p.rows[i][1] < lastBoss);
+  const groups = [];
+  for (const i of shown) {
+    const L = sideOf(p.rows[i][2]), g = groups[groups.length - 1];
+    if (g && g.L === L) g.items.push(i); else groups.push({ L, items: [i] });
+  }
+  let no = 0;
+  const body = groups.map((g, gi) => g.items.map((i, k) => {
+    const r = p.rows[i], b = base[i], wc = whoChanged(r, i), pc = placeChanged(r, i), lesser = r[0] === "lessers";
+    const name = lesser ? "雑魚"
+      : wc ? `<s>${esc(nameOf(b[0], b[3]))}</s> → <b>${esc(nameOf(r[0], r[3]))}</b>` : esc(nameOf(r[0], r[3]));
+    const pos = k === 0 ? `<td class="side" rowspan="${g.items.length}"><b>${sideLabel(r[2])}</b>`
+      + (sideName[g.L] ? `<span>${g.L}側</span>` : "") + `</td>` : "";
+    return `<tr class="${gi > 0 && k === 0 ? "gstart " : ""}${wc || pc ? "ch " : ""}${cls(r[0])}">`
+      + `<td class="no">${lesser ? "" : ++no}</td>${pos}`
+      + `<td class="boss"><div class="bx">${lesser ? "" : iconOf(r[0], 22)}<span>${name}${spot(r[2]) ? ` <i>${spot(r[2])}</i>` : ""}`
+      + (pc ? `<em>元は ${sideLabel(b[2])}（${placeText(b[2])}）</em>` : "") + `</span></div></td>`
+      + `<td class="sec">${r[1]}</td><td class="memo">${esc(r[4] || "")}</td></tr>`;
+  }).join("")).join("");
   const changedIdx = p.rows.map((r, i) => i).filter(i => isChanged(p.rows[i], i));
-  const secs = [...new Set(p.rows.map(r => r[1]))].sort((a, b) => b - a);
-  const head = `<thead><tr><th>残り</th>${lanes.map(([L, nm]) => `<th>${L === "?" ? "" : L + "側"}${nm ? `<span class="lname">${esc(nm)}</span>` : ""}</th>`).join("")}</tr></thead>`;
-  const body = secs.map(sec => {
-    const at = p.rows.map((r, i) => i).filter(i => p.rows[i][1] === sec);
-    const ch = at.some(i => isChanged(p.rows[i], i));
-    return `<tr class="${ch ? "chrow" : ""}"><td class="t">${sec}s</td>`
-      + lanes.map(([L]) => `<td>${at.filter(i => sideOf(p.rows[i][2]) === L).map(item).join("")}</td>`).join("") + `</tr>`;
-  }).join("");
   return `<details class="pat" open><summary>${esc(p.name)}<span class="q">　変わったところ ${changedIdx.length}件`
     + `${p.updated ? "　" + esc(p.updated) + " 追加" : ""}</span></summary>`
     + (p.note ? `<p class="pnote">${esc(p.note)}</p>` : "")
-    + `<div class="scroll"><table class="lanes">${head}<tbody>${body}</tbody></table></div></details>`;
+    + `<div class="scroll"><table class="sheet"><thead><tr><th></th><th>位置</th><th>オオモノ</th><th>秒数</th><th>メモ</th></tr></thead>`
+    + `<tbody>${body}</tbody></table></div></details>`;
 }
 let lastSpawns = "";
 async function loadSpawns() {
@@ -303,7 +328,7 @@ async function loadSpawns() {
     if (!sec || !pats.length) continue;
     sec.querySelector(".whead .hzbig").insertAdjacentHTML("beforebegin", `<span class="tag newsp">当日の湧き ${pats.length}件</span>`);
     sec.insertAdjacentHTML("beforeend", `<div class="added"><h3>当日に見つかった湧き</h3>`
-      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数と出てくる時間は同じで、種類や場所が変わったオオモノは赤い背景で「元 → 当日」の形で出しています。</p>`
+      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数と出てくる時間は同じで、チームの表と同じく時間の順に並べ、同じ位置が続くところをまとめています。種類や場所が変わったオオモノは赤い背景で「元 → 当日」の形で出しています。</p>`
       + pats.map(p => patternHtml(n, p)).join("") + `</div>`);
   }
 }
