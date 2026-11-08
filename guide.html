@@ -76,6 +76,7 @@
   .chip.gone { opacity:.55; }
   .newtag { display:inline-block; font-size:10px; font-weight:800; background:#d9534f; color:#fff; border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:middle; }
   .tl tr.new td { background:rgba(217,83,79,.08); }
+  .tl td.was { color:var(--muted); font-size:13px; }
   .tag.newsp { border-color:#d9534f; color:#d9534f; }
   footer { color:var(--muted); font-size:12px; margin-top:28px; }
   @media (max-width:560px) { .panel { padding:12px; } th, td { padding:7px 6px; } .hzbig { margin-left:0; } }
@@ -229,45 +230,37 @@ const placeText = p => {
   if (!m) return esc(p);
   return (m[1] ? "ハシラ " : "") + m[2] + "側" + (m[3] ? " #" + m[3] : "");
 };
-const keyOf = r => r.join("|");
-function bossCount(rows) {
-  const c = {};
-  for (const [who, , , n] of rows) if (!["lessers", "rush", "SakelienGolden"].includes(who)) c[who] = (c[who] || 0) + n;
-  return c;
-}
+// 当日の湧きは元の湧きと同じ並び・同じオオモノで、残り時間と場所だけがちがう（オオモノの数は変わらない）
+const nameOf = (who, c) => who === "rush" ? "ラッシュの出現"
+  : who === "SakelienGolden" ? `${BASE.names[who]}（金イクラ ${c}個）` : (BASE.names[who] || who) + (c > 1 ? ` ×${c}` : "");
 function patternHtml(n, p) {
   const base = BASE.waves[n] || [];
-  const baseKeys = new Set(base.map(keyOf)), myKeys = new Set(p.rows.map(keyOf));
-  const cnt = bossCount(p.rows), bcnt = bossCount(base);
-  const diff = d => d ? `<span class="diff ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</span>` : "";
-  const chips = Object.entries(cnt).sort((a, b) => b[1] - a[1])
-    .map(([k, v]) => `<span class="chip">${iconOf(k, 22)}${esc(BASE.names[k])}<b>×${v}</b>${diff(v - (bcnt[k] || 0))}</span>`).join("")
-    + Object.keys(bcnt).filter(k => !cnt[k])
-    .map(k => `<span class="chip gone">${iconOf(k, 22)}${esc(BASE.names[k])}<b>×0</b>${diff(-bcnt[k])}</span>`).join("");
-  const total = Object.values(cnt).reduce((a, b) => a + b, 0), btotal = Object.values(bcnt).reduce((a, b) => a + b, 0);
-  const newCount = p.rows.filter(r => !baseKeys.has(keyOf(r))).length;
-  const gone = base.filter(r => !myKeys.has(keyOf(r)) && r[0] !== "lessers");
-  const tr = r => {
-    const [who, sec, place, c] = r, isNew = !baseKeys.has(keyOf(r));
-    let name, cls = "";
-    if (who === "rush") name = "ラッシュの出現";
-    else if (who === "SakelienGolden") { name = `${BASE.names[who]}（金イクラ ${c}個）`; cls = "gold"; }
-    else { name = (BASE.names[who] || who) + (c > 1 ? ` ×${c}` : ""); if (who === "lessers") cls = "lesser"; }
-    return `<tr class="${cls}${isNew ? " new" : ""}"><td class="t">${sec}s</td><td>${iconOf(who)}${esc(name)}`
-      + `${isNew ? '<span class="newtag">新</span>' : ""}</td><td>${placeText(place)}</td></tr>`;
+  const isChanged = (r, i) => base[i] && (r[1] !== base[i][1] || r[2] !== base[i][2]);
+  const cls = who => who === "lessers" ? "lesser" : who === "SakelienGolden" ? "gold" : "";
+  const was = (r, i) => {
+    const b = base[i], parts = [];
+    if (r[1] !== b[1]) parts.push(`${b[1]}s`);
+    if (r[2] !== b[2]) parts.push(placeText(b[2]));
+    return parts.join("・");
   };
-  const head = `<thead><tr><th>残り時間</th><th>出てくるもの</th><th>場所</th></tr></thead>`;
-  const newRows = p.rows.filter(r => !baseKeys.has(keyOf(r)));
-  const changed = newRows.length ? `<table class="tl">${head}<tbody>${newRows.map(tr).join("")}</tbody></table>` : "";
+  const changedIdx = p.rows.map((r, i) => i).filter(i => isChanged(p.rows[i], i));
+  const changed = changedIdx.length
+    ? `<table class="tl"><thead><tr><th>残り時間</th><th>出てくるもの</th><th>場所</th><th>元の湧き</th></tr></thead><tbody>`
+      + changedIdx.map(i => { const [who, sec, place, c] = p.rows[i];
+        return `<tr class="${cls(who)} new"><td class="t">${sec}s</td><td>${iconOf(who)}${esc(nameOf(who, c))}</td>`
+          + `<td><b>${placeText(place)}</b></td><td class="was">${was(p.rows[i], i)}</td></tr>`; }).join("")
+      + `</tbody></table>`
+    : `<p class="note">元の湧きと同じです</p>`;
+  const order = p.rows.map((r, i) => i).sort((a, b) => p.rows[b][1] - p.rows[a][1] || a - b);
   const full = `<details><summary>このパターンの出現タイミングをすべて見る（${p.rows.length}件）</summary>`
-    + `<table class="tl">${head}<tbody>${p.rows.map(tr).join("")}</tbody></table></details>`;
-  const goneHtml = gone.length ? `<p class="note">元の湧きにあって、このパターンでは出なかったオオモノ：`
-    + gone.map(([who, sec, place]) => `${esc(BASE.names[who] || who)}（${sec}s・${placeText(place)}）`).join("、") + "</p>" : "";
-  return `<details class="pat" open><summary>${esc(p.name)}<span class="q">　オオモノ ${total}体${diff(total - btotal)}`
-    + `　新しい湧き ${newCount}件${p.updated ? "　" + esc(p.updated) + " 追加" : ""}</span></summary>`
-    + (p.note ? `<p class="pnote">${esc(p.note)}</p>` : "")
-    + `<div class="chips">${chips}</div>${goneHtml}`
-    + changed + full + `</details>`;
+    + `<table class="tl"><thead><tr><th>残り時間</th><th>出てくるもの</th><th>場所</th></tr></thead><tbody>`
+    + order.map(i => { const r = p.rows[i], ch = isChanged(r, i);
+      return `<tr class="${cls(r[0])}${ch ? " new" : ""}"><td class="t">${r[1]}s</td><td>${iconOf(r[0])}${esc(nameOf(r[0], r[3]))}`
+        + `${ch ? '<span class="newtag">変更</span>' : ""}</td><td>${placeText(r[2])}</td></tr>`; }).join("")
+    + `</tbody></table></details>`;
+  return `<details class="pat" open><summary>${esc(p.name)}<span class="q">　変わったところ ${changedIdx.length}件`
+    + `${p.updated ? "　" + esc(p.updated) + " 追加" : ""}</span></summary>`
+    + (p.note ? `<p class="pnote">${esc(p.note)}</p>` : "") + changed + full + `</details>`;
 }
 let lastSpawns = "";
 async function loadSpawns() {
@@ -282,7 +275,7 @@ async function loadSpawns() {
     if (!sec || !pats.length) continue;
     sec.querySelector(".whead .hzbig").insertAdjacentHTML("beforebegin", `<span class="tag newsp">当日の湧き ${pats.length}件</span>`);
     sec.insertAdjacentHTML("beforeend", `<div class="added"><h3>当日に見つかった湧き</h3>`
-      + `<p class="note">元の湧きはそのまま上に残しています。<span class="newtag">新</span> は元の湧きにない出方です。</p>`
+      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数は同じで、出てくる時間や場所が変わったところだけを載せています。</p>`
       + pats.map(p => patternHtml(n, p)).join("") + `</div>`);
   }
 }
