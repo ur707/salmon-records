@@ -26,5 +26,6 @@
  {"time": "2026-11-08T15:14:57", "shift": "2026-11-08 09:00", "waves": [[71, null], [0, 19]], "total": 71, "new": ["合計", "WAVE1"], "clear": false, "red": 3277, "ex": null, "img": "20261108_151457.png"},
  {"time": "2026-11-08T15:17:49", "shift": "2026-11-08 09:00", "waves": [[67, 18], [0, 19]], "total": 67, "new": [], "clear": false, "red": 3296, "ex": null},
  {"time": "2026-11-08T15:20:37", "shift": "2026-11-08 09:00", "waves": [[65, null], [0, 19]], "total": 65, "new": [], "clear": false, "red": 3362, "ex": null, "img": "20261108_152037.png"},
- {"time": "2026-11-08T15:23:23", "shift": "2026-11-08 09:00", "waves": [[67, null], [0, 19]], "total": 67, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_152323.png"}
+ {"time": "2026-11-08T15:23:23", "shift": "2026-11-08 09:00", "waves": [[67, null], [0, 19]], "total": 67, "new": [], "clear": false, "red": null, "ex": null, "img": "20261108_152323.png"},
+ {"time": "2026-11-08T15:26:09", "shift": "2026-11-08 09:00", "waves": [[71, 18], [0, 19]], "total": 71, "new": [], "clear": false, "red": 3530, "ex": null}
 ]
