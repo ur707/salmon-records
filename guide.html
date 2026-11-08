@@ -78,6 +78,24 @@
   .tl tr.new td { background:rgba(217,83,79,.08); }
   .tl td.was { color:var(--muted); font-size:13px; }
   .tl td.was img { margin-right:4px; }
+  .lanes { table-layout:fixed; min-width:520px; }
+  .lanes th { text-align:center; font-size:13px; color:var(--ink); }
+  .lanes th:first-child, .lanes td.t { width:52px; }
+  .lanes th .lname { display:block; font-size:11px; color:var(--muted); font-weight:600; }
+  .lanes td { vertical-align:top; white-space:normal; padding:4px 5px; border-left:1px solid var(--line); }
+  .lanes td.t { font-weight:800; border-left:0; padding-top:8px; }
+  .lanes tr.chrow td.t { color:#d9534f; }
+  .li { display:flex; gap:5px; align-items:flex-start; font-size:13px; line-height:1.4; padding:3px 4px; border-radius:6px; margin:1px 0; }
+  .li img { flex:none; }
+  .li.lesser { color:var(--muted); font-size:12px; }
+  .li.gold { color:var(--gold); font-weight:700; }
+  .li.ch { background:rgba(217,83,79,.13); }
+  .li s { color:var(--muted); font-weight:400; }
+  .li .pos { color:var(--muted); font-size:11px; font-weight:400; }
+  .li .from { color:#d9534f; font-size:11px; font-weight:700; }
+  .li .lm { color:var(--accent-ink); font-size:11px; font-weight:700; }
+  @media (max-width:560px) { .lanes { min-width:0; } .lanes th:first-child, .lanes td.t { width:34px; font-size:12px; }
+    .lanes td { padding:3px 2px; } .li { font-size:12px; padding:2px 3px; } .li img { display:none; } .lanes th { font-size:12px; } }
   .tl td.memo { white-space:normal; min-width:11em; font-size:13px; }
   .tag.newsp { border-color:#d9534f; color:#d9534f; }
   footer { color:var(--muted); font-size:12px; margin-top:28px; }
@@ -241,31 +259,36 @@ function patternHtml(n, p) {
   const placeChanged = (r, i) => base[i] && r[2] !== base[i][2];
   const isChanged = (r, i) => whoChanged(r, i) || placeChanged(r, i);
   const cls = who => who === "lessers" ? "lesser" : who === "SakelienGolden" ? "gold" : "";
-  const was = (r, i) => {
-    if (!isChanged(r, i)) return "";
-    const b = base[i];
-    return (whoChanged(r, i) ? `${iconOf(b[0], 20)}${esc(nameOf(b[0], b[3]))}` : "")
-      + (whoChanged(r, i) && placeChanged(r, i) ? "・" : "") + (placeChanged(r, i) ? placeText(b[2]) : "");
+  // 場所ごとに3列：縦が残り時間、横が A・B・C側（p.lanes でチームの呼び方と並び順を決められる）
+  const lanes = (p.lanes || [["A", ""], ["B", ""], ["C", ""]]).slice();
+  const sideOf = pl => { const m = /^(?:Fs)?([ABC])/.exec(pl); return m ? m[1] : "?"; };
+  if (p.rows.some(r => sideOf(r[2]) === "?")) lanes.push(["?", "その他"]);
+  const posText = pl => {
+    const m = /^(Fs)?([ABC])(\d*)$/.exec(pl);
+    if (!m) return esc(pl);
+    return m[3] ? "#" + m[3] : "";
   };
-  const row = (i, mark) => {
-    const r = p.rows[i], [who, sec, place, c] = r, ch = isChanged(r, i);
-    return `<tr class="${cls(who)}${ch ? " new" : ""}"><td class="t">${sec}s</td>`
-      + `<td>${iconOf(who)}${whoChanged(r, i) ? `<b>${esc(nameOf(who, c))}</b>` : esc(nameOf(who, c))}${mark && ch ? '<span class="newtag">変更</span>' : ""}</td>`
-      + `<td>${placeChanged(r, i) ? `<b>${placeText(place)}</b>` : placeText(place)}</td>`
-      + `<td class="was">${was(r, i)}</td><td class="memo">${esc(r[4] || "")}</td></tr>`;
+  const item = i => {
+    const r = p.rows[i], b = base[i], wc = whoChanged(r, i), pc = placeChanged(r, i);
+    if (r[0] === "lessers") return `<div class="li lesser">ザコ${r[4] ? `<div class="lm">${esc(r[4])}</div>` : ""}</div>`;
+    const name = wc ? `<s>${esc(nameOf(b[0], b[3]))}</s> → <b>${esc(nameOf(r[0], r[3]))}</b>` : esc(nameOf(r[0], r[3]));
+    return `<div class="li ${cls(r[0])}${wc || pc ? " ch" : ""}">${iconOf(r[0], 22)}<div>${name} <span class="pos">${posText(r[2])}</span>`
+      + (pc ? `<div class="from">元は ${placeText(b[2])}</div>` : "")
+      + (r[4] ? `<div class="lm">${esc(r[4])}</div>` : "") + `</div></div>`;
   };
-  const head = `<thead><tr><th>残り時間</th><th>出てくるもの</th><th>場所</th><th>元の湧き</th><th>メモ</th></tr></thead>`;
   const changedIdx = p.rows.map((r, i) => i).filter(i => isChanged(p.rows[i], i));
-  const shownIdx = p.rows.map((r, i) => i).filter(i => isChanged(p.rows[i], i) || p.rows[i][4]);
-  const changed = shownIdx.length
-    ? `<div class="scroll"><table class="tl">${head}<tbody>${shownIdx.map(i => row(i, true)).join("")}</tbody></table></div>`
-    : `<p class="note">元の湧きと同じです</p>`;
-  const order = p.rows.map((r, i) => i).sort((a, b) => p.rows[b][1] - p.rows[a][1] || a - b);
-  const full = `<details><summary>このパターンの出現タイミングをすべて見る（${p.rows.length}件）</summary>`
-    + `<div class="scroll"><table class="tl">${head}<tbody>${order.map(i => row(i, true)).join("")}</tbody></table></div></details>`;
+  const secs = [...new Set(p.rows.map(r => r[1]))].sort((a, b) => b - a);
+  const head = `<thead><tr><th>残り</th>${lanes.map(([L, nm]) => `<th>${L === "?" ? "" : L + "側"}${nm ? `<span class="lname">${esc(nm)}</span>` : ""}</th>`).join("")}</tr></thead>`;
+  const body = secs.map(sec => {
+    const at = p.rows.map((r, i) => i).filter(i => p.rows[i][1] === sec);
+    const ch = at.some(i => isChanged(p.rows[i], i));
+    return `<tr class="${ch ? "chrow" : ""}"><td class="t">${sec}s</td>`
+      + lanes.map(([L]) => `<td>${at.filter(i => sideOf(p.rows[i][2]) === L).map(item).join("")}</td>`).join("") + `</tr>`;
+  }).join("");
   return `<details class="pat" open><summary>${esc(p.name)}<span class="q">　変わったところ ${changedIdx.length}件`
     + `${p.updated ? "　" + esc(p.updated) + " 追加" : ""}</span></summary>`
-    + (p.note ? `<p class="pnote">${esc(p.note)}</p>` : "") + changed + full + `</details>`;
+    + (p.note ? `<p class="pnote">${esc(p.note)}</p>` : "")
+    + `<div class="scroll"><table class="lanes">${head}<tbody>${body}</tbody></table></div></details>`;
 }
 let lastSpawns = "";
 async function loadSpawns() {
@@ -280,7 +303,7 @@ async function loadSpawns() {
     if (!sec || !pats.length) continue;
     sec.querySelector(".whead .hzbig").insertAdjacentHTML("beforebegin", `<span class="tag newsp">当日の湧き ${pats.length}件</span>`);
     sec.insertAdjacentHTML("beforeend", `<div class="added"><h3>当日に見つかった湧き</h3>`
-      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数と出てくる時間は同じで、種類や場所が変わった行（<span class="newtag">変更</span>）と、メモのある行を載せています。</p>`
+      + `<p class="note">元の湧きはそのまま上に残しています。オオモノの数と出てくる時間は同じで、種類や場所が変わったオオモノは赤い背景で「元 → 当日」の形で出しています。</p>`
       + pats.map(p => patternHtml(n, p)).join("") + `</div>`);
   }
 }
