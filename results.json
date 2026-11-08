@@ -39,5 +39,6 @@
  {"time": "2026-11-08T15:54:32", "shift": "2026-11-08 09:00", "waves": [[67, null], [0, 19]], "total": 67, "new": [], "clear": false, "red": 3419, "ex": null, "img": "20261108_155432.png"},
  {"time": "2026-11-08T15:57:28", "shift": "2026-11-08 09:00", "waves": [[71, null], [0, 19]], "total": 71, "new": [], "clear": false, "red": 3579, "ex": null, "img": "20261108_155728.png"},
  {"time": "2026-11-08T16:03:06", "shift": "2026-11-08 09:00", "waves": [[66, null], [0, 19]], "total": 66, "new": [], "clear": false, "red": 3274, "ex": null, "img": "20261108_160306.png"},
- {"time": "2026-11-08T16:05:54", "shift": "2026-11-08 09:00", "waves": [[67, 18], [0, 19]], "total": 67, "new": [], "clear": false, "red": 3544, "ex": null}
+ {"time": "2026-11-08T16:05:54", "shift": "2026-11-08 09:00", "waves": [[67, 18], [0, 19]], "total": 67, "new": [], "clear": false, "red": 3544, "ex": null},
+ {"time": "2026-11-08T16:08:40", "shift": "2026-11-08 09:00", "waves": [[null, null], [0, 19]], "total": null, "new": [], "clear": false, "red": 3431, "ex": null, "img": "20261108_160840.png"}
 ]
