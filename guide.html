@@ -162,8 +162,7 @@
     .lanes td { padding:3px 2px; } .li { font-size:12px; padding:2px 3px; } .li img { display:none; } .lanes th { font-size:12px; } }
   .tl td.memo { white-space:normal; min-width:11em; font-size:13px; }
   .charts { margin-top:16px; }
-  .charts h3 { font-size:15px; margin:0 0 8px; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; }
-  .charts .cedit { margin-left:auto; font-size:12px; font-weight:700; color:var(--accent-ink); }
+  .charts h3 { font-size:15px; margin:0 0 8px; }
   .cgrid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
   .cw { border:1px solid var(--line); border-radius:10px; padding:8px 10px; min-width:0; }
   .cwh { display:flex; align-items:center; gap:6px; font-size:14px; font-weight:800; margin-bottom:4px; }
@@ -388,55 +387,18 @@ async function loadSpawns() {
   }
 }
 
-// ---- ブキごとのチャート：各WAVEの100秒間の動きをブキごとにメモしたもの ----
-// charts.json の "sheet" にGoogleスプレッドシート（ウェブに公開したCSV）があれば、そちらを表示する。
-// シートの形：1行目が見出し（WAVE・ブキ名4つ）、2行目からWAVEごとに1行。セルの中で改行してよい
-function parseCsv(s) {
-  const rows = []; let row = [], cell = "", q = false;
-  for (let i = 0; i < s.length; i++) {
-    const c = s[i];
-    if (q) { if (c === '"') { if (s[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
-    else if (c === '"') q = true;
-    else if (c === ",") { row.push(cell); cell = ""; }
-    else if (c === "\n" || c === "\r") { if (c === "\r" && s[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
-    else cell += c;
-  }
-  if (cell || row.length) { row.push(cell); rows.push(row); }
-  return rows;
-}
-function sheetWaves(csv) {
-  const rows = parseCsv(csv.replace(/^﻿/, ""));
-  if (!rows.length) return null;
-  const head = rows[0].map(h => h.trim());
-  const col = BASE.weapons.map(([nm], i) => { const j = head.indexOf(nm); return j >= 0 ? j : i + 1; });
-  const out = {};
-  rows.slice(1).forEach(r => {
-    const m = /[1-5]/.exec(r[0] || "");
-    if (!m) return;
-    const memos = col.map(j => (r[j] || "").trim());
-    if (memos.some(Boolean)) out[m[0]] = { memos };
-  });
-  return out;
-}
+// ---- ブキごとのチャート（site/charts.json）：各WAVEの100秒間の動きをブキごとにメモしたもの ----
 let lastCharts = null;
 async function loadCharts() {
   let text = "{}";
   try { const r = await fetch("charts.json", { cache: "no-store" }); if (r.ok) text = await r.text(); } catch (e) { return; }
+  if (text === lastCharts) return;
+  lastCharts = text;
   let data; try { data = JSON.parse(text); } catch (e) { return; }
-  const sheet = data.sheet || {};
-  let fromSheet = null;
-  if (sheet.csv) {
-    try { const r = await fetch(sheet.csv, { cache: "no-store" }); if (r.ok) fromSheet = sheetWaves(await r.text()); } catch (e) { }
-  }
-  const key = text + "|" + JSON.stringify(fromSheet);
-  if (key === lastCharts) return;
-  lastCharts = key;
-  const waves = fromSheet || data.waves || {};
-  const link = sheet.edit ? `<a class="cedit" href="${esc(sheet.edit)}" target="_blank" rel="noopener">スプレッドシートで書く ↗</a>` : "";
   document.querySelectorAll(".charts").forEach(el => {
-    const c = waves[el.dataset.n] || {};
+    const c = (data.waves || {})[el.dataset.n] || {};
     const memos = c.memos || [];
-    el.innerHTML = `<h3>ブキごとのチャート（100秒）${!fromSheet && c.updated ? `<span class="q">　${esc(c.updated)} 更新</span>` : ""}${link}</h3>`
+    el.innerHTML = `<h3>ブキごとのチャート（100秒）${c.updated ? `<span class="q">　${esc(c.updated)} 更新</span>` : ""}</h3>`
       + `<div class="cgrid">` + BASE.weapons.map(([nm, img], i) => {
         const m = (memos[i] || "").trim();
         return `<div class="cw"><div class="cwh"><img src="${img}" alt="" width="30" height="30" loading="lazy">${esc(nm)}</div>`
