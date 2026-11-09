@@ -14,6 +14,24 @@
   "lessers": "ザコ"
  },
  "icon": "https://leanny.github.io/splat3/images/coopEnemy/{}.png",
+ "weapons": [
+  [
+   ".52ガロン",
+   "https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Shooter_Gravity_00.png"
+  ],
+  [
+   "ドライブワイパー",
+   "https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Saber_Lite_00.png"
+  ],
+  [
+   "ヴァリアブルローラー",
+   "https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Roller_Hunter_00.png"
+  ],
+  [
+   "トライストリンガー",
+   "https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Stringer_Normal_00.png"
+  ]
+ ],
  "waves": {
   "1": [
    [
