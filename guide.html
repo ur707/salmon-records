@@ -613,8 +613,8 @@ setInterval(() => { loadSpawns(); loadCharts(); }, 60000);
       col.querySelectorAll("span").forEach(s => s.style.height = d[s.dataset.c] * 100 + "%");
       col.title = `タマヒロイ${i}匹\n` + CATS.filter(c => d[c] > 0.0005).map(c => `${name(c)}  ${pct(d[c])}`).join("\n");
     });
-    const d = dist(n, p), e = Math.round((Math.floor(n / 20) - n * p) * 100) / 100;
-    $s("snT").textContent = `タマヒロイ${n}匹のとき（期待値 ${e > 0 ? "+" : e < 0 ? "−" : "±"}${Math.abs(e)}匹）`;
+    const d = dist(n, p);
+    $s("snT").textContent = `タマヒロイ${n}匹のとき`;
     const top = Math.max(...CATS.map(c => d[c]));
     $s("snRows").innerHTML = CATS.filter(c => d[c] > 0.0005).map(c =>
       `<span class="k">${name(c)}</span><span class="bar"><span style="width:${d[c] / top * 100}%;background:${COLORS[c]}"></span></span><span class="v">${pct(d[c])}</span>`).join("");
