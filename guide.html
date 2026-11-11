@@ -163,6 +163,27 @@
   .tl td.memo { white-space:normal; min-width:11em; font-size:13px; }
   .basecols:not(:empty) { margin-top:16px; }
   .basecols h3 { font-size:15px; margin:0 0 2px; }
+  .snctl { display:flex; flex-wrap:wrap; gap:8px 24px; margin:10px 0; font-size:14px; }
+  .snctl label { display:flex; align-items:center; gap:8px; flex:1; min-width:240px; color:var(--muted); }
+  .snctl input { flex:1; accent-color:var(--accent); }
+  .snctl b { color:var(--ink); min-width:44px; }
+  .snleg { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .snleg span { display:flex; align-items:center; gap:4px; }
+  .snleg i { width:10px; height:10px; border-radius:2px; }
+  .snplot { display:grid; grid-template-columns:34px minmax(0, 1fr); gap:6px; }
+  .sny { display:flex; flex-direction:column; justify-content:space-between; height:220px; font-size:11px; color:var(--muted); text-align:right; }
+  .sncols { display:grid; grid-template-columns:repeat(61, minmax(0, 1fr)); gap:1px; height:220px; }
+  .sncol { all:unset; display:flex; flex-direction:column; height:100%; cursor:pointer; opacity:.55; }
+  .sncol.on { opacity:1; outline:2px solid var(--ink); outline-offset:1px; }
+  .sncol span { display:block; }
+  .snx { display:grid; grid-template-columns:repeat(61, minmax(0, 1fr)); gap:1px; font-size:11px; color:var(--muted); margin-top:4px; }
+  .snx span { white-space:nowrap; overflow:visible; }
+  .snatch h3 { font-size:15px; margin:16px 0 8px; }
+  .snrows { display:grid; grid-template-columns:72px minmax(0, 1fr) 56px; gap:6px 10px; align-items:center; font-size:14px; }
+  .snrows .k { color:var(--muted); }
+  .snrows .bar { height:14px; background:var(--bg); border-radius:4px; overflow:hidden; }
+  .snrows .bar span { display:block; height:100%; border-radius:0 4px 4px 0; }
+  .snrows .v { text-align:right; font-variant-numeric:tabular-nums; }
   .charts { margin-top:16px; }
   .charts h3 { font-size:15px; margin:0 0 8px; }
   .cgrid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
@@ -266,6 +287,19 @@
     </details>
     <div class="basecols"></div>
     <div class="charts" data-n="2"></div>
+  </section>
+  <section class="panel snatch" id="snatch">
+    <h2>タマヒロイと金シャケの増減</h2>
+    <p class="note">タマヒロイ1匹ごとに決まった確率（ふつうは5%）で金シャケが1匹消え、タマヒロイを20匹倒すごとに金シャケが1匹増える、として計算した確率です。消せる金シャケがいつもいるものとしています。</p>
+    <div class="snctl">
+      <label>タマヒロイの数 <input type="range" id="snN" min="0" max="60" step="1" value="20"><b id="snNo">20匹</b></label>
+      <label>1匹あたり消える確率 <input type="range" id="snP" min="1" max="20" step="0.5" value="5"><b id="snPo">5%</b></label>
+    </div>
+    <div class="snleg" id="snLeg"></div>
+    <div class="snplot"><div class="sny"><span>100%</span><span>50%</span><span>0%</span></div>
+      <div><div class="sncols" id="snCols"></div><div class="snx" id="snX"></div></div></div>
+    <h3 id="snT"></h3>
+    <div class="snrows" id="snRows"></div>
   </section>
   <section class="panel wave" id="w3">
     <div class="whead"><h2>WAVE 3</h2><span class="tag">干潮</span><span class="tag ev">通常</span>
@@ -550,6 +584,44 @@ function tick(st) {
 Object.keys(BASE.maps).forEach(makePlayer);
 loadSpawns(); loadCharts();
 setInterval(() => { loadSpawns(); loadCharts(); }, 60000);
+
+(() => {
+  const CATS = [3, 2, 1, 0, -1, -2, -3, -4], MAXN = 60;
+  const COLORS = { 3: "#185FA5", 2: "#378ADD", 1: "#85B7EB", 0: "#B4B2A9", "-1": "#F09595", "-2": "#E24B4A", "-3": "#A32D2D", "-4": "#791F1F" };
+  const name = v => v > 0 ? "+" + v + "匹" : v === 0 ? "±0" : v === -4 ? "−4匹以上" : "−" + (-v) + "匹";
+  const comb = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return r; };
+  const dist = (n, p) => {
+    const b = Math.floor(n / 20), d = {}; CATS.forEach(c => d[c] = 0);
+    for (let k = 0; k <= n; k++) d[Math.max(-4, Math.min(3, b - k))] += comb(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k);
+    return d;
+  };
+  const pct = v => (Math.round(v * 1000) / 10).toFixed(1) + "%";
+  const $s = id => document.getElementById(id);
+  if (!$s("snCols")) return;
+  $s("snLeg").innerHTML = CATS.map(c => `<span><i style="background:${COLORS[c]}"></i>${name(c)}</span>`).join("");
+  $s("snX").innerHTML = Array.from({ length: MAXN + 1 }, (_, i) => `<span>${i % 10 === 0 ? i + "匹" : ""}</span>`).join("");
+  $s("snCols").innerHTML = Array.from({ length: MAXN + 1 }, (_, i) =>
+    `<button type="button" class="sncol" data-n="${i}" aria-label="タマヒロイ${i}匹">${CATS.map(c => `<span data-c="${c}" style="background:${COLORS[c]}"></span>`).join("")}</button>`).join("");
+  $s("snCols").querySelectorAll(".sncol").forEach(b => b.onclick = () => { $s("snN").value = b.dataset.n; update(); });
+  function update() {
+    const n = +$s("snN").value, p = +$s("snP").value / 100;
+    $s("snNo").textContent = n + "匹";
+    $s("snPo").textContent = (Math.round(p * 1000) / 10) + "%";
+    $s("snCols").querySelectorAll(".sncol").forEach(col => {
+      const i = +col.dataset.n, d = dist(i, p);
+      col.classList.toggle("on", i === n);
+      col.querySelectorAll("span").forEach(s => s.style.height = d[s.dataset.c] * 100 + "%");
+      col.title = `タマヒロイ${i}匹\n` + CATS.filter(c => d[c] > 0.0005).map(c => `${name(c)}  ${pct(d[c])}`).join("\n");
+    });
+    const d = dist(n, p), e = Math.round((Math.floor(n / 20) - n * p) * 100) / 100;
+    $s("snT").textContent = `タマヒロイ${n}匹のとき（期待値 ${e > 0 ? "+" : e < 0 ? "−" : "±"}${Math.abs(e)}匹）`;
+    const top = Math.max(...CATS.map(c => d[c]));
+    $s("snRows").innerHTML = CATS.filter(c => d[c] > 0.0005).map(c =>
+      `<span class="k">${name(c)}</span><span class="bar"><span style="width:${d[c] / top * 100}%;background:${COLORS[c]}"></span></span><span class="v">${pct(d[c])}</span>`).join("");
+  }
+  $s("snN").oninput = update; $s("snP").oninput = update;
+  update();
+})();
 </script>
 <script>
 // 地図をタップすると原寸で表示（スクロールして見られる）。もう一度タップで閉じる
