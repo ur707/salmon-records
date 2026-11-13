@@ -28,6 +28,13 @@
   .item { display:flex; align-items:center; gap:6px; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:4px 10px 4px 4px; font-weight:700; font-size:14px; }
   .item img { width:34px; height:34px; border-radius:6px; }
   .stage { font-size:20px; font-weight:800; }
+  .tgwrap { grid-column:1 / -1; }
+  .tgrow { display:flex; flex-wrap:wrap; align-items:center; gap:6px 4px; }
+  .tg { position:relative; display:inline-flex; background:#c9532f; border-radius:9px; padding:4px; }
+  .tg img { display:block; width:40px; height:40px; }
+  .tg i { position:absolute; top:-6px; left:-6px; min-width:18px; height:18px; border-radius:9px; background:var(--ink); color:var(--panel); font-style:normal; font-size:11px; font-weight:800; text-align:center; line-height:18px; padding:0 4px; }
+  .tgsep { color:var(--muted); font-weight:800; padding:0 2px; }
+  @media (max-width:560px) { .tg img { width:30px; height:30px; } }
   table { width:100%; border-collapse:collapse; font-size:14px; }
   th, td { padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
   th { color:var(--muted); font-size:12px; font-weight:600; }
@@ -217,6 +224,7 @@
       <span class="item"><img src="https://leanny.github.io/splat3/images/subspe/Wsp_SpNiceBall00.png" alt="">ナイスダマ</span>
       <span class="item"><img src="https://leanny.github.io/splat3/images/subspe/Wsp_SpShockSonar00.png" alt="">ホップソナー</span>
     </div></div>
+    <div class="tgwrap"><h3>タゲ巡（狙われるブキの順番）</h3><div class="tgrow"><span class="tg"><i>1</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Shooter_Gravity_00.png" alt=".52ガロン" title=".52ガロン" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>2</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Stringer_Normal_00.png" alt="トライストリンガー" title="トライストリンガー" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>3</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Roller_Hunter_00.png" alt="ヴァリアブルローラー" title="ヴァリアブルローラー" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>4</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Shooter_Gravity_00.png" alt=".52ガロン" title=".52ガロン" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>5</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Roller_Hunter_00.png" alt="ヴァリアブルローラー" title="ヴァリアブルローラー" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>6</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Saber_Lite_00.png" alt="ドライブワイパー" title="ドライブワイパー" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>7</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Shooter_Gravity_00.png" alt=".52ガロン" title=".52ガロン" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>8</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Saber_Lite_00.png" alt="ドライブワイパー" title="ドライブワイパー" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>9</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Stringer_Normal_00.png" alt="トライストリンガー" title="トライストリンガー" width="40" height="40"></span><span class="tgsep">›</span><span class="tg"><i>10</i><img src="https://leanny.github.io/splat3/images/weapon_flat/Path_Wst_Roller_Hunter_00.png" alt="ヴァリアブルローラー" title="ヴァリアブルローラー" width="40" height="40"></span></div></div>
   </section>
 
   <section class="panel scroll">
