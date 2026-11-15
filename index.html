@@ -254,6 +254,7 @@
 
   <section>
     <h2>時間帯ごとの成績</h2>
+    <div class="tabs" role="tablist" id="hourDays"></div>
     <div class="panel scroll"><table id="hours"></table></div>
   </section>
 
@@ -475,10 +476,22 @@ function renderRed() {
   $("redDist").innerHTML = `<thead><tr><th>赤イクラ</th><th>回数</th><th>割合</th><th></th><th>最後に出した日時</th></tr></thead><tbody>${rows.join("")}</tbody>`;
 }
 
+// 時間帯ごとの成績は、日付をしぼって見られる（"all" は全部の日）
+let hourDay = "all";
+// 夜ふかしの配信が日をまたいでも同じ日になるよう、朝6時で日付を区切る（表の並びも6時台から）
+const playDay = d => dayKey(new Date(d.getTime() - 6 * 3600e3));
 function renderHours() {
-  if (!runs.length) { $("hours").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
+  const days = [...new Set(runs.map(r => playDay(r.d)))].sort();
+  if (!days.includes(hourDay)) hourDay = "all";
+  const dayLabel = k => { const d = new Date(k + "T00:00"); return `${fmtDate(d)}（${"日月火水木金土"[d.getDay()]}）`; };
+  $("hourDays").style.display = days.length < 2 ? "none" : "";
+  $("hourDays").innerHTML = ["all", ...days].map(k =>
+    `<button role="tab" data-k="${k}" aria-selected="${k === hourDay}">${k === "all" ? "全部" : dayLabel(k)}</button>`).join("");
+  $("hourDays").querySelectorAll("button").forEach(b => b.onclick = () => { hourDay = b.dataset.k; renderHours(); });
+  const list0 = hourDay === "all" ? runs : runs.filter(r => playDay(r.d) === hourDay);
+  if (!list0.length) { $("hours").innerHTML = `<tbody><tr><td class="empty">まだ記録がありません</td></tr></tbody>`; return; }
   const map = new Map();
-  for (const r of runs) {
+  for (const r of list0) {
     const h = r.d.getHours();
     if (!map.has(h)) map.set(h, []);
     map.get(h).push(r);
